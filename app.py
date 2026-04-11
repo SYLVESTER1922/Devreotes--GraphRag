@@ -323,7 +323,7 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
             refresh_btn.click(fn=lambda: get_history_display(), outputs=history_display)
 
         with gr.Column(scale=3):
-            chatbot = gr.Chatbot(height=520, show_label=False, type="tuples")
+            chatbot = gr.Chatbot(height=520, show_label=False)
             with gr.Row():
                 msg = gr.Textbox(placeholder="Ask about the Devreotes Lab research...", show_label=False, scale=6)
                 send_btn = gr.Button("Send", scale=1, variant="primary")
