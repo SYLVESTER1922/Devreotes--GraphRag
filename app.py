@@ -354,9 +354,7 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
                     </div>
                 </div>
             """)
-            history_display = gr.Markdown("No searches yet.")
-            refresh_btn = gr.Button("↻ Refresh", size="sm")
-            refresh_btn.click(fn=lambda: get_history_display(), outputs=history_display)
+            history_dropdown = gr.Dropdown(choices=[], label="", interactive=True, allow_custom_value=False)
 
         with gr.Column(scale=3):
             chatbot = gr.Chatbot(height=520, show_label=False)
@@ -425,20 +423,28 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
                 </div>
             """)
 
-    def respond(message, chat_history):
+  def respond(message, chat_history):
         bot_response = chat_fn(message, chat_history)
         chat_history.append({"role": "user", "content": message})
         chat_history.append({"role": "assistant", "content": bot_response})
-        return "", chat_history, get_history_display()
+        return "", chat_history, gr.update(choices=search_history[:15], value=None)
 
-    msg.submit(respond, [msg, chatbot], [msg, chatbot, history_display])
-    send_btn.click(respond, [msg, chatbot], [msg, chatbot, history_display])
+    msg.submit(respond, [msg, chatbot], [msg, chatbot, history_dropdown])
+    send_btn.click(respond, [msg, chatbot], [msg, chatbot, history_dropdown])
 
     for btn in [s1, s2, s3, s4, s5, s6]:
         btn.click(
-            fn=lambda suggestion, h: ("", h + [{"role": "user", "content": suggestion}, {"role": "assistant", "content": chat_fn(suggestion, h)}], get_history_display()),
+            fn=lambda suggestion, h: ("", h + [{"role": "user", "content": suggestion}, {"role": "assistant", "content": chat_fn(suggestion, h)}], gr.update(choices=search_history[:15], value=None)),
             inputs=[btn, chatbot],
-            outputs=[msg, chatbot, history_display],
+            outputs=[msg, chatbot, history_dropdown],
         )
+        def replay_history(selected, chat_history):
+        if selected:
+            bot_response = chat_fn(selected, chat_history)
+            chat_history.append({"role": "user", "content": selected})
+            chat_history.append({"role": "assistant", "content": bot_response})
+        return chat_history, gr.update(value=None)
+
+    history_dropdown.change(replay_history, [history_dropdown, chatbot], [chatbot, history_dropdown])
 
 demo.launch()
