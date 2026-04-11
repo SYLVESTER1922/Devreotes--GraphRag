@@ -283,7 +283,7 @@ def generate_answer(question, conversation_history=None):
     return response.choices[0].message.content
 
 
-search_history = []
+search_history = {}
 
 
 def chat_fn(message, history):
@@ -296,8 +296,7 @@ def chat_fn(message, history):
     answer = generate_answer(message, conversation_history)
 
     if message.strip().lower() not in ['hi','hello','hey','thanks','thank you','bye','goodbye']:
-        search_history.insert(0, message)
-        search_history[:] = search_history[:20]
+        search_history[message] = answer
 
     return answer
 
@@ -427,7 +426,7 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
         bot_response = chat_fn(message, chat_history)
         chat_history.append({"role": "user", "content": message})
         chat_history.append({"role": "assistant", "content": bot_response})
-        return "", chat_history, gr.update(choices=search_history[:15], value=None)
+        return "", chat_history, gr.update(choices=list(search_history.keys())[:15], value=None)
 
     msg.submit(respond, [msg, chatbot], [msg, chatbot, history_dropdown])
     send_btn.click(respond, [msg, chatbot], [msg, chatbot, history_dropdown])
@@ -437,17 +436,16 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
             fn=lambda suggestion, h: (
                 "",
                 h + [{"role": "user", "content": suggestion}, {"role": "assistant", "content": chat_fn(suggestion, h)}],
-                gr.update(choices=search_history[:15], value=None)
+                gr.update(choices=list(search_history.keys())[:15], value=None)
             ),
             inputs=[btn, chatbot],
             outputs=[msg, chatbot, history_dropdown],
         )
 
     def replay_history(selected, chat_history):
-        if selected:
-            bot_response = chat_fn(selected, chat_history)
+        if selected and selected in search_history:
             chat_history.append({"role": "user", "content": selected})
-            chat_history.append({"role": "assistant", "content": bot_response})
+            chat_history.append({"role": "assistant", "content": search_history[selected]})
         return chat_history, gr.update(value=None)
 
     history_dropdown.change(replay_history, [history_dropdown, chatbot], [chatbot, history_dropdown])
