@@ -36,6 +36,45 @@ def fuzzy_query_graph(question):
     seen_papers = set()
 
     with driver.session() as session:
+        # Handle "latest", "newest", "most recent" queries
+        if any(word in question_lower for word in ['latest', 'newest', 'recent', 'last']):
+            result = session.run(
+                "MATCH (p:Paper) "
+                "WHERE p.year IS NOT NULL "
+                "OPTIONAL MATCH (p)-[:MENTIONS_PROTEIN]->(pr:Protein) "
+                "OPTIONAL MATCH (p)-[:USES_METHOD]->(m:Method) "
+                "OPTIONAL MATCH (p)-[:EXPLORES_CONCEPT]->(c:Concept) "
+                "RETURN p.number AS paper_num, p.title AS title, p.year AS year, "
+                "p.key_findings AS findings, "
+                "collect(DISTINCT pr.name) AS proteins, "
+                "collect(DISTINCT m.name) AS methods, "
+                "collect(DISTINCT c.name) AS concepts "
+                "ORDER BY p.year DESC LIMIT 5")
+            records = list(result)
+            if records:
+                context_parts.append("MOST RECENT PAPERS:")
+                for r in records:
+                    context_parts.append(f"  Paper #{r['paper_num']} ({r['year']}): '{r['title']}'\n    Findings: {r['findings']}\n    Proteins: {r['proteins']}\n    Methods: {r['methods']}\n    Concepts: {r['concepts']}")
+
+        # Handle "oldest", "earliest", "first" queries
+        if any(word in question_lower for word in ['oldest', 'earliest', 'first']):
+            result = session.run(
+                "MATCH (p:Paper) "
+                "WHERE p.year IS NOT NULL AND p.year > 0 "
+                "OPTIONAL MATCH (p)-[:MENTIONS_PROTEIN]->(pr:Protein) "
+                "OPTIONAL MATCH (p)-[:USES_METHOD]->(m:Method) "
+                "OPTIONAL MATCH (p)-[:EXPLORES_CONCEPT]->(c:Concept) "
+                "RETURN p.number AS paper_num, p.title AS title, p.year AS year, "
+                "p.key_findings AS findings, "
+                "collect(DISTINCT pr.name) AS proteins, "
+                "collect(DISTINCT m.name) AS methods, "
+                "collect(DISTINCT c.name) AS concepts "
+                "ORDER BY p.year ASC LIMIT 5")
+            records = list(result)
+            if records:
+                context_parts.append("EARLIEST PAPERS:")
+                for r in records:
+                    context_parts.append(f"  Paper #{r['paper_num']} ({r['year']}): '{r['title']}'\n    Findings: {r['findings']}\n    Proteins: {r['proteins']}\n    Methods: {r['methods']}\n    Concepts: {r['concepts']}")
         for kw in keywords:
             kw_lower = kw.lower()
             search_terms = [kw_lower]
