@@ -4,7 +4,6 @@ import gradio as gr
 from openai import OpenAI
 from neo4j import GraphDatabase
 
-# ---- Credentials ----
 NEO4J_URI = os.environ.get("NEO4J_URI", "neo4j+s://9f45c691.databases.neo4j.io")
 NEO4J_USER = os.environ.get("NEO4J_USER", "9f45c691")
 NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD", "0Mnrcu_ZtECegn-6kYoRPNHvpYLBiOjNpqkygC4e9gM")
@@ -13,6 +12,7 @@ OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
 client = OpenAI()
 driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
+
 
 def extract_keywords(question):
     stop_words = {'what','which','where','when','how','does','about','tell','show',
@@ -29,6 +29,7 @@ def extract_keywords(question):
     words = re.findall(r'[a-zA-Z0-9/()-]+', question)
     return [w for w in words if w.lower() not in stop_words and len(w) > 2]
 
+
 def fuzzy_query_graph(question):
     keywords = extract_keywords(question)
     question_lower = question.lower()
@@ -36,7 +37,7 @@ def fuzzy_query_graph(question):
     seen_papers = set()
 
     with driver.session() as session:
-        # Handle "latest", "newest", "most recent" queries
+
         if any(word in question_lower for word in ['latest', 'newest', 'recent', 'last']):
             result = session.run(
                 "MATCH (p:Paper) "
@@ -56,7 +57,6 @@ def fuzzy_query_graph(question):
                 for r in records:
                     context_parts.append(f"  Paper #{r['paper_num']} ({r['year']}): '{r['title']}'\n    Findings: {r['findings']}\n    Proteins: {r['proteins']}\n    Methods: {r['methods']}\n    Concepts: {r['concepts']}")
 
-        # Handle "oldest", "earliest", "first" queries
         if any(word in question_lower for word in ['oldest', 'earliest', 'first']):
             result = session.run(
                 "MATCH (p:Paper) "
@@ -75,6 +75,7 @@ def fuzzy_query_graph(question):
                 context_parts.append("EARLIEST PAPERS:")
                 for r in records:
                     context_parts.append(f"  Paper #{r['paper_num']} ({r['year']}): '{r['title']}'\n    Findings: {r['findings']}\n    Proteins: {r['proteins']}\n    Methods: {r['methods']}\n    Concepts: {r['concepts']}")
+
         for kw in keywords:
             kw_lower = kw.lower()
             search_terms = [kw_lower]
@@ -184,6 +185,7 @@ def fuzzy_query_graph(question):
         return "No matching information found in the knowledge graph for this query."
     return "\n".join(context_parts)
 
+
 SYSTEM_PROMPT = """You are the Devreotes Lab Research Assistant, a specialized AI for Professor Peter Devreotes' lab at Johns Hopkins University.
 
 The knowledge graph contains 238 papers (1975-2025), 738 proteins, 531 methods, 329 concepts, and 225 organisms.
@@ -202,6 +204,7 @@ RULES:
 
 GREETING_WORDS = {'hi','hello','hey','good morning','good afternoon','good evening',
                   'howdy','greetings','sup','yo',"what's up",'whats up','hola'}
+
 
 def resolve_followup(question, conversation_history):
     if not conversation_history:
@@ -231,6 +234,7 @@ def resolve_followup(question, conversation_history):
         except:
             return question
     return question
+
 
 def generate_answer(question, conversation_history=None):
     question_stripped = question.strip().lower().rstrip('!?.,:;')
@@ -278,7 +282,9 @@ def generate_answer(question, conversation_history=None):
     response = client.chat.completions.create(model="gpt-4o-mini", messages=messages, temperature=0.3, max_tokens=800)
     return response.choices[0].message.content
 
+
 search_history = []
+
 
 def chat_fn(message, history):
     global search_history
@@ -295,10 +301,6 @@ def chat_fn(message, history):
 
     return answer
 
-def get_history_display():
-    if not search_history:
-        return "No searches yet."
-    return "\n".join([f"- {q}" for q in search_history[:15]])
 
 with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
 
@@ -354,7 +356,7 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
                     </div>
                 </div>
             """)
-            history_dropdown = gr.Dropdown(choices=[], label="", interactive=True, allow_custom_value=False)
+            history_dropdown = gr.Dropdown(choices=[], label="Click to re-ask a question", interactive=True, allow_custom_value=False)
 
         with gr.Column(scale=3):
             chatbot = gr.Chatbot(height=520, show_label=False)
@@ -390,7 +392,7 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
                         <strong style="color:#d0ddf0;">Prof. Peter N. Devreotes</strong><br>
                         Department of Cell Biology<br>
                         Johns Hopkins School of Medicine<br><br>
-                        Research spanning <strong style="color:#8ab4f8;">1975–2025</strong> focusing on
+                        Research spanning <strong style="color:#8ab4f8;">1975-2025</strong> focusing on
                         cell migration, chemotaxis, signal transduction, and the cytoskeleton.
                     </div>
                     <div style="color:#4facfe; font-size:11px; font-weight:600;
@@ -404,8 +406,6 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
                         <span style="color:#8ab4f8;">Ras</span> · 41 papers<br>
                         <span style="color:#8ab4f8;">PI3K</span> · 26 papers<br>
                         <span style="color:#8ab4f8;">PIP3</span> · 24 papers<br>
-                        <span style="color:#8ab4f8;">Gα2</span> · 24 papers<br>
-                        <span style="color:#8ab4f8;">CRAC</span> · 21 papers<br>
                         <span style="color:#8ab4f8;">myosin II</span> · 19 papers
                     </div>
                     <div style="color:#4facfe; font-size:11px; font-weight:600;
@@ -423,7 +423,7 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
                 </div>
             """)
 
-  def respond(message, chat_history):
+    def respond(message, chat_history):
         bot_response = chat_fn(message, chat_history)
         chat_history.append({"role": "user", "content": message})
         chat_history.append({"role": "assistant", "content": bot_response})
@@ -434,11 +434,16 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
 
     for btn in [s1, s2, s3, s4, s5, s6]:
         btn.click(
-            fn=lambda suggestion, h: ("", h + [{"role": "user", "content": suggestion}, {"role": "assistant", "content": chat_fn(suggestion, h)}], gr.update(choices=search_history[:15], value=None)),
+            fn=lambda suggestion, h: (
+                "",
+                h + [{"role": "user", "content": suggestion}, {"role": "assistant", "content": chat_fn(suggestion, h)}],
+                gr.update(choices=search_history[:15], value=None)
+            ),
             inputs=[btn, chatbot],
             outputs=[msg, chatbot, history_dropdown],
         )
-        def replay_history(selected, chat_history):
+
+    def replay_history(selected, chat_history):
         if selected:
             bot_response = chat_fn(selected, chat_history)
             chat_history.append({"role": "user", "content": selected})
