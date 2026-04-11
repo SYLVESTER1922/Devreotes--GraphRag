@@ -247,9 +247,6 @@ def chat_fn(message, history):
     for h in history:
         if isinstance(h, dict):
             conversation_history.append(h)
-        elif isinstance(h, (list, tuple)) and len(h) == 2:
-            conversation_history.append({"role": "user", "content": h[0]})
-            conversation_history.append({"role": "assistant", "content": h[1]})
 
     answer = generate_answer(message, conversation_history)
 
@@ -391,7 +388,8 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
 
     def respond(message, chat_history):
         bot_response = chat_fn(message, chat_history)
-        chat_history.append((message, bot_response))
+        chat_history.append({"role": "user", "content": message})
+        chat_history.append({"role": "assistant", "content": bot_response})
         return "", chat_history, get_history_display()
 
     msg.submit(respond, [msg, chatbot], [msg, chatbot, history_display])
@@ -399,7 +397,7 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
 
     for btn in [s1, s2, s3, s4, s5, s6]:
         btn.click(
-            fn=lambda suggestion, h: ("", h + [(suggestion, chat_fn(suggestion, h))], get_history_display()),
+            fn=lambda suggestion, h: ("", h + [{"role": "user", "content": suggestion}, {"role": "assistant", "content": chat_fn(suggestion, h)}], get_history_display()),
             inputs=[btn, chatbot],
             outputs=[msg, chatbot, history_display],
         )
