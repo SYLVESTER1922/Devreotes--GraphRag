@@ -568,5 +568,5 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
     export_btn.click(handle_export, [chatbot], [export_file])
     analytics_btn.click(load_analytics, outputs=[analytics_display])
 
-demo.launch()
+demo.launch(share=True)
      
