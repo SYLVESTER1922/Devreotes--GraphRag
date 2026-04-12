@@ -486,6 +486,19 @@ def confirm_upload(entities_json, password):
     except:
         return "❌ Invalid data. Please re-upload.", gr.update(visible=True)
 
+    # Check for duplicate
+    title = entities.get("title", "")
+    with driver.session() as session:
+        result = session.run(
+            "MATCH (p:Paper) WHERE toLower(p.title) CONTAINS $t "
+            "RETURN p.number AS num, p.title AS title, p.year AS year LIMIT 3",
+            t=title[:50].lower())
+        duplicates = list(result)
+        if duplicates:
+            dup_list = "\n".join([f"  - Paper #{d['num']} ({d['year']}): {d['title']}" for d in duplicates])
+            return (f"⚠️ **Similar paper(s) already exist in the graph:**\n\n{dup_list}\n\n"
+                    f"This paper was NOT added to avoid duplication."), gr.update(visible=True)
+
     paper_num = get_next_paper_number()
     loaded, errors = load_paper_to_graph(paper_num, entities)
 
