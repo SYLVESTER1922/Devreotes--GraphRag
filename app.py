@@ -650,7 +650,7 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
             history_dropdown = gr.Dropdown(choices=[], label="Click to replay",
                                            interactive=True, allow_custom_value=False)
 
-gr.HTML("""
+            gr.HTML("""
                 <div style="padding: 0 12px;">
                     <div style="color: #4facfe; font-size: 11px; font-weight: 600;
                                 text-transform: uppercase; letter-spacing: 1.5px; margin-top: 16px; margin-bottom: 8px;">
