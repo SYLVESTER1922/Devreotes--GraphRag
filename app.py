@@ -650,6 +650,16 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
             history_dropdown = gr.Dropdown(choices=[], label="Click to replay",
                                            interactive=True, allow_custom_value=False)
 
+gr.HTML("""
+                <div style="padding: 0 12px;">
+                    <div style="color: #4facfe; font-size: 11px; font-weight: 600;
+                                text-transform: uppercase; letter-spacing: 1.5px; margin-top: 16px; margin-bottom: 8px;">
+                        📊 Analytics
+                    </div>
+                </div>
+            """)
+            analytics_btn = gr.Button("Load Analytics", size="sm", variant="secondary")
+            analytics_display = gr.Markdown("")
         # CENTER CHAT
         with gr.Column(scale=3):
             chatbot = gr.Chatbot(height=480, show_label=False)
@@ -783,6 +793,59 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
         return gr.update(visible=False)
 
     export_btn.click(handle_export, [chatbot], [export_file])
+def load_analytics():
+        with driver.session() as session:
+            # Counts
+            paper_count = session.run("MATCH (p:Paper) RETURN count(p) AS c").single()["c"]
+            protein_count = session.run("MATCH (n:Protein) RETURN count(n) AS c").single()["c"]
+            method_count = session.run("MATCH (n:Method) RETURN count(n) AS c").single()["c"]
+            concept_count = session.run("MATCH (n:Concept) RETURN count(n) AS c").single()["c"]
+            organism_count = session.run("MATCH (n:Organism) RETURN count(n) AS c").single()["c"]
+            rel_count = session.run("MATCH ()-[r]->() RETURN count(r) AS c").single()["c"]
+
+            # Papers by decade
+            decades = session.run(
+                "MATCH (p:Paper) WHERE p.year > 0 "
+                "RETURN (p.year / 10) * 10 AS decade, count(p) AS count "
+                "ORDER BY decade")
+            decade_lines = []
+            for r in decades:
+                bar = "█" * (r["count"] // 2)
+                decade_lines.append(f"  {r['decade']}s: {bar} {r['count']}")
+
+            # Top 5 proteins
+            top_proteins = session.run(
+                "MATCH (p:Paper)-[:MENTIONS_PROTEIN]->(pr:Protein) "
+                "RETURN pr.name AS name, count(p) AS c ORDER BY c DESC LIMIT 5")
+            protein_lines = [f"  {r['name']}: {'█' * (r['c'] // 3)} {r['c']}" for r in top_proteins]
+
+            # Top 5 methods
+            top_methods = session.run(
+                "MATCH (p:Paper)-[:USES_METHOD]->(m:Method) "
+                "RETURN m.name AS name, count(p) AS c ORDER BY c DESC LIMIT 5")
+            method_lines = [f"  {r['name']}: {'█' * (r['c'] // 2)} {r['c']}" for r in top_methods]
+
+            # Top 5 concepts
+            top_concepts = session.run(
+                "MATCH (p:Paper)-[:EXPLORES_CONCEPT]->(c:Concept) "
+                "RETURN c.name AS name, count(p) AS cnt ORDER BY cnt DESC LIMIT 5")
+            concept_lines = [f"  {r['name']}: {'█' * (r['cnt'] // 5)} {r['cnt']}" for r in top_concepts]
+
+        return (
+            f"**Graph Overview**\n"
+            f"- Papers: **{paper_count}**\n"
+            f"- Proteins: **{protein_count}**\n"
+            f"- Methods: **{method_count}**\n"
+            f"- Concepts: **{concept_count}**\n"
+            f"- Organisms: **{organism_count}**\n"
+            f"- Relationships: **{rel_count}**\n\n"
+            f"**Papers by Decade**\n```\n" + "\n".join(decade_lines) + "\n```\n\n"
+            f"**Top Proteins**\n```\n" + "\n".join(protein_lines) + "\n```\n\n"
+            f"**Top Methods**\n```\n" + "\n".join(method_lines) + "\n```\n\n"
+            f"**Top Concepts**\n```\n" + "\n".join(concept_lines) + "\n```"
+        )
+
+    analytics_btn.click(load_analytics, outputs=[analytics_display])
 
 demo.launch()
 
