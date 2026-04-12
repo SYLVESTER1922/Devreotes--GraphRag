@@ -217,19 +217,17 @@ def resolve_followup(question, conversation_history):
     if any(trigger in question_lower for trigger in summary_triggers):
         return "__USE_HISTORY_ONLY__"
 
-    followup_triggers = ['tell me more','more about','what else','which ones',
-                         'elaborate','expand','go on','continue','and what about',
-                         'how about','what about','why','can you explain',
-                         'specifically','in detail','more details']
-    is_followup = any(trigger in question_lower for trigger in followup_triggers) or len(question.split()) <= 4
-
-    if is_followup:
+    # If question is short OR contains pronouns/references to previous context,
+    # let GPT decide if it's a follow-up
+    if len(question.split()) <= 8 or any(word in question_lower for word in ['these','those','them','they','it','this','that','the same','above','previous','mentioned']):
         try:
-            messages = [{"role": "system", "content": "Rewrite the follow-up as a standalone question. Return ONLY the rewritten question."}]
-            for turn in conversation_history[-4:]:
+            messages = [
+                {"role": "system", "content": "You are a question classifier. Given a conversation and a new question, determine if the question is a FOLLOW-UP to the previous conversation or a NEW independent question. If it's a follow-up, rewrite it as a standalone question using context from the conversation. If it's a new question, return it unchanged. Return ONLY the question, nothing else."}
+            ]
+            for turn in conversation_history[-6:]:
                 messages.append(turn)
-            messages.append({"role": "user", "content": f"Rewrite: {question}"})
-            response = client.chat.completions.create(model="gpt-4o-mini", messages=messages, temperature=0, max_tokens=100)
+            messages.append({"role": "user", "content": f"New question: {question}"})
+            response = client.chat.completions.create(model="gpt-4o-mini", messages=messages, temperature=0, max_tokens=150)
             return response.choices[0].message.content.strip()
         except:
             return question
