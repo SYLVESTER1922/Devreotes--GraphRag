@@ -648,17 +648,17 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
             export_file = gr.File(label="Download Chat", visible=False)
 
             # Upload accordion - hidden by default
-            with gr.Accordion("📤 Upload New Paper to Knowledge Graph", open=False, visible=False) as upload_accordion:
+            with gr.Group(visible=False) as upload_section:
+                gr.HTML('<div style="color: #4facfe; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">Upload New Paper</div>')
                 with gr.Row():
                     upload_file = gr.File(label="Select PDF", file_types=[".pdf"], scale=3)
-                with gr.Row():
-                    upload_btn = gr.Button("🔍 Analyze Paper", size="sm", variant="secondary")
+                    upload_btn = gr.Button("🔍 Analyze", size="sm", variant="secondary", scale=1)
                 upload_preview = gr.Markdown("")
                 with gr.Row():
-                    upload_password = gr.Textbox(placeholder="Enter password to confirm", type="password",
-                                                 show_label=False, scale=2)
-                    confirm_btn = gr.Button("✅ Confirm & Add to Graph", size="sm", variant="primary", visible=False)
+                    upload_password = gr.Textbox(placeholder="Password to confirm", type="password", show_label=False, scale=2)
+                    confirm_btn = gr.Button("✅ Add to Graph", size="sm", variant="primary", visible=False, scale=1)
                 upload_result = gr.Markdown("")
+                close_upload_btn = gr.Button("✕ Close", size="sm", variant="secondary")
 
             gr.HTML("""
                 <div style="color: #4facfe; font-size: 11px; font-weight: 600;
@@ -747,7 +747,8 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
     history_dropdown.change(replay_history, [history_dropdown, chatbot], [chatbot, history_dropdown])
 
     # Add Paper toggle
-    add_paper_btn.click(fn=lambda: gr.update(visible=True, open=True), outputs=[upload_accordion])
+    add_paper_btn.click(fn=lambda: gr.update(visible=True), outputs=[upload_section])
+    close_upload_btn.click(fn=lambda: gr.update(visible=False), outputs=[upload_section])
 
     # Upload handlers
     def handle_upload(file):
