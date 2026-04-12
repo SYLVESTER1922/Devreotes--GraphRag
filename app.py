@@ -451,8 +451,9 @@ def process_upload(file):
     if not entities:
         return "❌ Failed to extract entities from the paper.", ""
 
+    relevance_note = ""
     if not entities.get("is_cell_biology", False):
-        return "❌ This paper does not appear to be related to the Devreotes Lab research areas. Upload rejected.", ""
+        relevance_note = "\n\n⚠️ **Note:** This paper may not be directly related to the Devreotes Lab research areas.\n"
 
     title = entities.get("title", "Unknown")
     year = entities.get("year", "Unknown")
@@ -469,6 +470,7 @@ def process_upload(file):
         f"**Concepts:** {', '.join(concepts) if concepts else 'None'}\n\n"
         f"**Organisms:** {', '.join(organisms) if organisms else 'None'}\n\n"
         f"**Key findings:** {findings}\n\n"
+       f"{relevance_note}"
         f"---\n*Enter password and click 'Confirm & Add to Graph' to add this paper.*")
 
     return preview, json.dumps(entities)
