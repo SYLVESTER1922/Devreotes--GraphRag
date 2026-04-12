@@ -37,6 +37,28 @@ def fuzzy_query_graph(question):
     seen_papers = set()
 
     with driver.session() as session:
+        # Direct paper number lookup
+        paper_numbers = re.findall(r'#?(\d{1,3})\b', question)
+        if paper_numbers:
+            for pnum in paper_numbers[:10]:
+                result = session.run(
+                    "MATCH (p:Paper {number: $num}) "
+                    "OPTIONAL MATCH (p)-[:MENTIONS_PROTEIN]->(pr:Protein) "
+                    "OPTIONAL MATCH (p)-[:USES_METHOD]->(m:Method) "
+                    "OPTIONAL MATCH (p)-[:EXPLORES_CONCEPT]->(c:Concept) "
+                    "OPTIONAL MATCH (p)-[:USES_ORGANISM]->(o:Organism) "
+                    "RETURN p.number AS paper_num, p.title AS title, p.year AS year, "
+                    "p.key_findings AS findings, "
+                    "collect(DISTINCT pr.name) AS proteins, "
+                    "collect(DISTINCT m.name) AS methods, "
+                    "collect(DISTINCT c.name) AS concepts, "
+                    "collect(DISTINCT o.name) AS organisms", num=pnum)
+                records = list(result)
+                if records:
+                    for r in records:
+                        if r['paper_num'] not in seen_papers:
+                            context_parts.append(f"PAPER #{r['paper_num']} ({r['year']}): '{r['title']}'\n    Findings: {r['findings']}\n    Proteins: {r['proteins']}\n    Methods: {r['methods']}\n    Concepts: {r['concepts']}\n    Organisms: {r['organisms']}")
+                            seen_papers.add(r['paper_num'])
 
         if any(word in question_lower for word in ['latest', 'newest', 'recent', 'last']):
             result = session.run(
@@ -254,6 +276,15 @@ def generate_answer(question, conversation_history=None):
         return "Goodbye! Come back anytime."
 
     resolved_question = resolve_followup(question, conversation_history)
+    # If resolved question still references "these/those papers", use history only
+    if resolved_question != question and any(word in question.lower() for word in ['these','those','them','they','when was','when were','who wrote']):
+        messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+        if conversation_history:
+            for turn in conversation_history[-6:]:
+                messages.append(turn)
+        messages.append({"role": "user", "content": question})
+        response = client.chat.completions.create(model="gpt-4o-mini", messages=messages, temperature=0.3, max_tokens=800)
+        return response.choices[0].message.content
 
     if resolved_question == "__USE_HISTORY_ONLY__":
         messages = [{"role": "system", "content": SYSTEM_PROMPT}]
