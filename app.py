@@ -192,7 +192,7 @@ def generate_answer(question, conversation_history=None):
         ref_words = ['this','these','those','them','they','it','that','above',
                      'previous','mentioned','you said','you mentioned','the same',
                      'where do i find','where is','where are','where can',
-                     'when was','when were','who wrote','which year',
+                     'when was','when were','who wrote','which year']
         summary_words = ['summarize','summary','in short','briefly','define this','in a summary','short version','simplify','simpler terms','in a nutshell','quick summary','shorter']
         if any(word in question_stripped for word in summary_words): is_conversational = True
         elif len(question.split()) <= 8 and any(word in question_stripped for word in ref_words): is_conversational = True
