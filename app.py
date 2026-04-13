@@ -19,11 +19,7 @@ driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
 
 def correct_spelling(question):
     try:
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "system", "content": "You are a spelling corrector for biology research questions. Fix any spelling errors and return ONLY the corrected question. If there are no errors, return the question unchanged."},
-                      {"role": "user", "content": question}],
-            temperature=0, max_tokens=150)
+        response = client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "system", "content": "You are a spelling corrector for biology research questions. Fix any spelling errors and return ONLY the corrected question. If there are no errors, return the question unchanged."}, {"role": "user", "content": question}], temperature=0, max_tokens=150)
         return response.choices[0].message.content.strip()
     except:
         return question
@@ -40,11 +36,9 @@ def query_graph(question):
     question_lower = question.lower()
     context_parts = []
     seen_papers = set()
-
     with driver.session() as session:
         paper_numbers = re.findall(r'#(\d{1,3})\b', question)
-        if not paper_numbers:
-            paper_numbers = re.findall(r'paper\s+(\d{1,3})\b', question_lower)
+        if not paper_numbers: paper_numbers = re.findall(r'paper\s+(\d{1,3})\b', question_lower)
         if paper_numbers:
             for pnum in paper_numbers[:10]:
                 result = session.run("MATCH (p:Paper {number: $num}) OPTIONAL MATCH (p)-[r1:MENTIONS_PROTEIN]->(pr:Protein) OPTIONAL MATCH (p)-[r2:USES_METHOD]->(m:Method) OPTIONAL MATCH (p)-[r3:EXPLORES_CONCEPT]->(c:Concept) OPTIONAL MATCH (p)-[r4:USES_ORGANISM]->(o:Organism) RETURN p.number AS paper_num, p.title AS title, p.year AS year, p.key_findings AS findings, p.journal AS journal, p.authors AS authors, collect(DISTINCT pr.name) AS proteins, collect(DISTINCT m.name) AS methods, collect(DISTINCT c.name) AS concepts, collect(DISTINCT o.name) AS organisms", num=pnum)
@@ -52,17 +46,14 @@ def query_graph(question):
                     if r['paper_num'] not in seen_papers:
                         context_parts.append(f"PAPER #{r['paper_num']} ({r['year']}): '{r['title']}'\n    Journal: {r['journal']}\n    Authors: {r['authors']}\n    Findings: {r['findings']}\n    Proteins: {r['proteins']}\n    Methods: {r['methods']}\n    Concepts: {r['concepts']}\n    Organisms: {r['organisms']}")
                         seen_papers.add(r['paper_num'])
-
         if any(word in question_lower for word in ['latest', 'newest', 'recent', 'most recent']):
             result = session.run("MATCH (p:Paper) WHERE p.year IS NOT NULL OPTIONAL MATCH (p)-[:MENTIONS_PROTEIN]->(pr:Protein) OPTIONAL MATCH (p)-[:USES_METHOD]->(m:Method) OPTIONAL MATCH (p)-[:EXPLORES_CONCEPT]->(c:Concept) RETURN p.number AS paper_num, p.title AS title, p.year AS year, p.key_findings AS findings, collect(DISTINCT pr.name) AS proteins, collect(DISTINCT m.name) AS methods, collect(DISTINCT c.name) AS concepts ORDER BY p.year DESC LIMIT 5")
             for r in result:
                 context_parts.append(f"  Paper #{r['paper_num']} ({r['year']}): '{r['title']}'\n    Findings: {r['findings']}\n    Proteins: {r['proteins']}\n    Methods: {r['methods']}\n    Concepts: {r['concepts']}")
-
         if any(word in question_lower for word in ['oldest', 'earliest', 'first paper']):
             result = session.run("MATCH (p:Paper) WHERE p.year IS NOT NULL AND p.year > 0 OPTIONAL MATCH (p)-[:MENTIONS_PROTEIN]->(pr:Protein) OPTIONAL MATCH (p)-[:EXPLORES_CONCEPT]->(c:Concept) RETURN p.number AS paper_num, p.title AS title, p.year AS year, p.key_findings AS findings, collect(DISTINCT pr.name) AS proteins, collect(DISTINCT c.name) AS concepts ORDER BY p.year ASC LIMIT 5")
             for r in result:
                 context_parts.append(f"  Paper #{r['paper_num']} ({r['year']}): '{r['title']}'\n    Findings: {r['findings']}\n    Proteins: {r['proteins']}\n    Concepts: {r['concepts']}")
-
         decade_match = re.search(r'\b(19[7-9]0|20[0-2]0)s?\b', question_lower)
         year_match = re.search(r'\b(19[7-9]\d|20[0-2]\d)\b', question)
         if decade_match:
@@ -85,31 +76,30 @@ def query_graph(question):
                     if r['paper_num'] not in seen_papers:
                         context_parts.append(f"  Paper #{r['paper_num']} ({r['year']}): '{r['title']}' — Concepts: {r['concepts']}")
                         seen_papers.add(r['paper_num'])
-
         if any(phrase in question_lower for phrase in ['list all', 'show all', 'all proteins', 'all methods', 'all concepts', 'all organisms', 'top proteins', 'top methods', 'top concepts', 'most studied', 'most used', 'most common', 'most mentioned', 'frequently']):
             if any(w in question_lower for w in ['protein', 'gene']):
                 result = session.run("MATCH (p:Paper)-[:MENTIONS_PROTEIN]->(pr:Protein) RETURN pr.name AS name, count(p) AS papers ORDER BY papers DESC LIMIT 20")
                 records = list(result)
                 if records:
-                    context_parts.append("TOP PROTEINS BY PAPER COUNT:")
+                    context_parts.append("TOP PROTEINS:")
                     for r in records: context_parts.append(f"  {r['name']}: {r['papers']} papers")
             elif any(w in question_lower for w in ['method', 'technique']):
                 result = session.run("MATCH (p:Paper)-[:USES_METHOD]->(m:Method) RETURN m.name AS name, count(p) AS papers ORDER BY papers DESC LIMIT 20")
                 records = list(result)
                 if records:
-                    context_parts.append("TOP METHODS BY PAPER COUNT:")
+                    context_parts.append("TOP METHODS:")
                     for r in records: context_parts.append(f"  {r['name']}: {r['papers']} papers")
             elif any(w in question_lower for w in ['concept', 'topic', 'theme']):
                 result = session.run("MATCH (p:Paper)-[:EXPLORES_CONCEPT]->(c:Concept) RETURN c.name AS name, count(p) AS papers ORDER BY papers DESC LIMIT 20")
                 records = list(result)
                 if records:
-                    context_parts.append("TOP CONCEPTS BY PAPER COUNT:")
+                    context_parts.append("TOP CONCEPTS:")
                     for r in records: context_parts.append(f"  {r['name']}: {r['papers']} papers")
             elif any(w in question_lower for w in ['organism', 'species', 'model']):
                 result = session.run("MATCH (p:Paper)-[:USES_ORGANISM]->(o:Organism) RETURN o.name AS name, count(p) AS papers ORDER BY papers DESC LIMIT 20")
                 records = list(result)
                 if records:
-                    context_parts.append("TOP ORGANISMS BY PAPER COUNT:")
+                    context_parts.append("TOP ORGANISMS:")
                     for r in records: context_parts.append(f"  {r['name']}: {r['papers']} papers")
             else:
                 for label, rel, node in [("PROTEINS","MENTIONS_PROTEIN","Protein"),("METHODS","USES_METHOD","Method"),("CONCEPTS","EXPLORES_CONCEPT","Concept")]:
@@ -118,7 +108,6 @@ def query_graph(question):
                     if records:
                         context_parts.append(f"TOP {label}:")
                         for r in records: context_parts.append(f"  {r['name']}: {r['papers']} papers")
-
         if any(phrase in question_lower for phrase in ['connected to', 'connection between', 'related to', 'relationship between', 'link between']):
             if len(keywords) >= 2:
                 kw1, kw2 = keywords[0].lower(), keywords[1].lower()
@@ -130,13 +119,10 @@ def query_graph(question):
                         if r['paper_num'] not in seen_papers:
                             context_parts.append(f"  Paper #{r['paper_num']} ({r['year']}): '{r['title']}'\n    Findings: {r['findings']}\n    Proteins: {r['proteins']}\n    Concepts: {r['concepts']}")
                             seen_papers.add(r['paper_num'])
-
         for kw in keywords:
             kw_lower = kw.lower()
             search_terms = [kw_lower]
-            if len(kw_lower) >= 5:
-                search_terms.append(kw_lower[1:])
-                search_terms.append(kw_lower[:-1])
+            if len(kw_lower) >= 5: search_terms.extend([kw_lower[1:], kw_lower[:-1]])
             for term in search_terms:
                 found = False
                 for rel, node, label in [("MENTIONS_PROTEIN","Protein","protein"),("USES_METHOD","Method","method"),("EXPLORES_CONCEPT","Concept","concept"),("USES_ORGANISM","Organism","organism")]:
@@ -148,10 +134,8 @@ def query_graph(question):
                             if r['paper_num'] not in seen_papers:
                                 context_parts.append(f"  Paper #{r['paper_num']} ({r['year']}): '{r['title']}' — {r['entity']}: {r['context']}")
                                 seen_papers.add(r['paper_num'])
-                        found = True
-                        break
+                        found = True; break
                 if found: break
-
         for kw in keywords:
             result = session.run("MATCH (p:Paper) WHERE toLower(p.title) CONTAINS $q OR toLower(p.key_findings) CONTAINS $q OPTIONAL MATCH (p)-[:MENTIONS_PROTEIN]->(pr:Protein) OPTIONAL MATCH (p)-[:USES_METHOD]->(m:Method) OPTIONAL MATCH (p)-[:EXPLORES_CONCEPT]->(c:Concept) RETURN p.number AS paper_num, p.title AS title, p.year AS year, p.key_findings AS findings, collect(DISTINCT pr.name) AS proteins, collect(DISTINCT m.name) AS methods, collect(DISTINCT c.name) AS concepts LIMIT 5", q=kw.lower())
             records = list(result)
@@ -162,7 +146,6 @@ def query_graph(question):
                     for r in new_records:
                         context_parts.append(f"  Paper #{r['paper_num']} ({r['year']}): '{r['title']}'\n    Findings: {r['findings']}\n    Proteins: {r['proteins']}\n    Methods: {r['methods']}")
                         seen_papers.add(r['paper_num'])
-
         if any(word in question_lower for word in ['how many', 'total', 'overview', 'statistics', 'stat']):
             counts = {}
             for label in ['Paper','Protein','Method','Concept','Organism']:
@@ -171,14 +154,11 @@ def query_graph(question):
             result = session.run("MATCH ()-[r]->() RETURN count(r) AS count")
             counts['Relationships'] = result.single()["count"]
             context_parts.append(f"\nGRAPH STATISTICS:\n  Papers: {counts['Paper']}\n  Proteins: {counts['Protein']}\n  Methods: {counts['Method']}\n  Concepts: {counts['Concept']}\n  Organisms: {counts['Organism']}\n  Relationships: {counts['Relationships']}")
-
     return "\n".join(context_parts) if context_parts else "NO_RESULTS"
 
 
 SYSTEM_PROMPT = """You are the Devreotes Lab Research Assistant, a specialized AI for Professor Peter Devreotes' lab at Johns Hopkins University School of Medicine.
-
 The knowledge graph contains 238 papers (1975-2025), 738 proteins, 531 methods, 329 concepts, and 225 organisms connected by 3,649 relationships.
-
 RULES:
 1. Answer in your own words from the provided graph context. Synthesize naturally.
 2. Keep responses concise - 2-4 sentences for simple questions, more only when necessary.
@@ -188,45 +168,34 @@ RULES:
 6. When listing papers, keep descriptions brief.
 7. Highlight connections between papers when relevant.
 8. If a follow-up references something already discussed, answer from conversation history.
-9. If asked to summarize a previous answer, rewrite concisely without adding new information.
-"""
+9. If asked to summarize a previous answer, rewrite concisely without adding new information."""
 
 GREETING_WORDS = {'hi','hello','hey','good morning','good afternoon','good evening','howdy','greetings','sup','yo',"what's up",'whats up','hola'}
 
 
 def generate_answer(question, conversation_history=None):
-    if not question or not question.strip():
-        return "Please type a question to get started."
+    if not question or not question.strip(): return "Please type a question to get started."
     question_stripped = question.strip().lower().rstrip('!?.,:;')
     if question_stripped in GREETING_WORDS or any(question_stripped.startswith(g) for g in GREETING_WORDS):
         return "Hello! I'm the Devreotes Lab Research Assistant — ask me anything about Professor Devreotes' 238 published papers on cell migration, chemotaxis, and signal transduction."
     off_topic_triggers = ['how are you','who are you','what are you','your name','what can you do','help me']
     if any(trigger in question_stripped for trigger in off_topic_triggers):
         return "I'm the Devreotes Lab Research Assistant. I can answer questions about proteins, methods, concepts, and organisms from 238 research papers spanning 1975 to 2025."
-    if 'thank' in question_stripped:
-        return "You're welcome! Feel free to ask more."
-    if 'bye' in question_stripped or 'goodbye' in question_stripped:
-        return "Goodbye! Come back anytime."
-
+    if 'thank' in question_stripped: return "You're welcome! Feel free to ask more."
+    if 'bye' in question_stripped or 'goodbye' in question_stripped: return "Goodbye! Come back anytime."
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     if conversation_history:
-        for turn in conversation_history[-8:]:
-            messages.append(turn)
-
+        for turn in conversation_history[-8:]: messages.append(turn)
     is_conversational = False
     if conversation_history:
         ref_words = ['this','these','those','them','they','it','that','above','previous','mentioned','you said','you mentioned','the same','where do i find','when was','when were','who wrote','which year','how many of','more about','tell me more','elaborate','go on','continue','what else','which ones','specifically','in detail','expand on']
         summary_words = ['summarize','summary','in short','briefly','define this','in a summary','short version','simplify','simpler terms','in a nutshell','quick summary','shorter']
-        if any(word in question_stripped for word in summary_words):
-            is_conversational = True
-        elif len(question.split()) <= 8 and any(word in question_stripped for word in ref_words):
-            is_conversational = True
-
+        if any(word in question_stripped for word in summary_words): is_conversational = True
+        elif len(question.split()) <= 8 and any(word in question_stripped for word in ref_words): is_conversational = True
     if is_conversational:
         messages.append({"role": "user", "content": question})
         response = client.chat.completions.create(model="gpt-4o-mini", messages=messages, temperature=0.3, max_tokens=800)
         return response.choices[0].message.content
-
     corrected = correct_spelling(question)
     graph_context = query_graph(corrected)
     if graph_context == "NO_RESULTS":
@@ -234,8 +203,7 @@ def generate_answer(question, conversation_history=None):
             messages.append({"role": "user", "content": question})
             response = client.chat.completions.create(model="gpt-4o-mini", messages=messages, temperature=0.3, max_tokens=800)
             answer = response.choices[0].message.content
-            if "not available" not in answer.lower() and "don't have" not in answer.lower():
-                return answer
+            if "not available" not in answer.lower() and "don't have" not in answer.lower(): return answer
         return "This information is not available in the Devreotes Lab knowledge base."
     messages.append({"role": "user", "content": f"Based on the following knowledge graph data, answer the question.\n\nGRAPH CONTEXT:\n{graph_context}\n\nQUESTION: {question}"})
     response = client.chat.completions.create(model="gpt-4o-mini", messages=messages, temperature=0.3, max_tokens=800)
@@ -262,8 +230,7 @@ def extract_entities_from_text(text):
     try:
         response = client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "system", "content": EXTRACTION_PROMPT}, {"role": "user", "content": truncated}], max_tokens=3000, temperature=0, response_format={"type": "json_object"})
         return json.loads(response.choices[0].message.content)
-    except:
-        return None
+    except: return None
 
 
 def escape_cypher(text):
@@ -272,12 +239,9 @@ def escape_cypher(text):
 
 
 def load_paper_to_graph(paper_num, entities):
-    e = entities
-    statements = []
-    title = escape_cypher(e.get("title", f"Paper {paper_num}"))
-    year = e.get("year", 0)
-    journal = escape_cypher(e.get("journal", "Unknown"))
-    key_findings = escape_cypher(e.get("key_findings", ""))
+    e = entities; statements = []
+    title = escape_cypher(e.get("title", f"Paper {paper_num}")); year = e.get("year", 0)
+    journal = escape_cypher(e.get("journal", "Unknown")); key_findings = escape_cypher(e.get("key_findings", ""))
     authors = escape_cypher(", ".join(e.get("authors", [])))
     statements.append(f"MERGE (p:Paper {{number: '{paper_num}'}}) SET p.title = '{title}', p.year = {year}, p.journal = '{journal}', p.key_findings = '{key_findings}', p.authors = '{authors}';")
     for protein in e.get("proteins", []):
@@ -317,22 +281,19 @@ def process_upload(file):
     relevance_note = ""
     if not entities.get("is_cell_biology", False):
         relevance_note = "\n\n⚠️ **Note:** This paper may not be directly related to the Devreotes Lab research areas.\n"
-    title = entities.get("title", "Unknown")
-    year = entities.get("year", "Unknown")
+    title = entities.get("title", "Unknown"); year = entities.get("year", "Unknown")
     proteins = [p["name"] for p in entities.get("proteins", [])]
     methods = [m["name"] for m in entities.get("methods", [])]
     concepts = [c["name"] for c in entities.get("concepts", [])]
     organisms = [o["name"] for o in entities.get("model_organisms", [])]
     findings = entities.get("key_findings", "")
-    preview = (f"📄 **{title}** ({year})\n\n**Proteins:** {', '.join(proteins) if proteins else 'None'}\n\n**Methods:** {', '.join(methods) if methods else 'None'}\n\n**Concepts:** {', '.join(concepts) if concepts else 'None'}\n\n**Organisms:** {', '.join(organisms) if organisms else 'None'}\n\n**Key findings:** {findings}{relevance_note}\n\n---\n*Enter password and click 'Add to Graph' to add this paper.*")
+    preview = f"📄 **{title}** ({year})\n\n**Proteins:** {', '.join(proteins) if proteins else 'None'}\n\n**Methods:** {', '.join(methods) if methods else 'None'}\n\n**Concepts:** {', '.join(concepts) if concepts else 'None'}\n\n**Organisms:** {', '.join(organisms) if organisms else 'None'}\n\n**Key findings:** {findings}{relevance_note}\n\n---\n*Enter password and click 'Add to Graph' to add this paper.*"
     return preview, json.dumps(entities)
 
 
 def confirm_upload(entities_json, password):
-    if password != UPLOAD_PASSWORD:
-        return "❌ Incorrect password.", gr.update(visible=True)
-    if not entities_json:
-        return "❌ No paper to confirm.", gr.update(visible=True)
+    if password != UPLOAD_PASSWORD: return "❌ Incorrect password.", gr.update(visible=True)
+    if not entities_json: return "❌ No paper to confirm.", gr.update(visible=True)
     try: entities = json.loads(entities_json)
     except: return "❌ Invalid data. Re-upload.", gr.update(visible=True)
     title = entities.get("title", "")
@@ -344,9 +305,9 @@ def confirm_upload(entities_json, password):
             return f"⚠️ **Similar paper(s) already exist:**\n\n{dup_list}\n\nPaper NOT added.", gr.update(visible=True)
     paper_num = get_next_paper_number()
     loaded, errors = load_paper_to_graph(paper_num, entities)
-    if errors:
-        return f"⚠️ Paper #{paper_num} added with {len(errors)} errors.", gr.update(visible=False)
-    n_p = len(entities.get("proteins", [])); n_m = len(entities.get("methods", [])); n_c = len(entities.get("concepts", [])); n_o = len(entities.get("model_organisms", []))
+    n_p = len(entities.get("proteins", [])); n_m = len(entities.get("methods", []))
+    n_c = len(entities.get("concepts", [])); n_o = len(entities.get("model_organisms", []))
+    if errors: return f"⚠️ Paper #{paper_num} added with {len(errors)} errors.", gr.update(visible=False)
     return f"✅ **Paper #{paper_num} added!**\n\n**Title:** {entities.get('title','')}\n\n**Added:** {n_p} proteins, {n_m} methods, {n_c} concepts, {n_o} organisms\n\nNow queryable in the chatbot.", gr.update(visible=False)
 
 
@@ -355,9 +316,7 @@ def export_chat(chat_history):
     lines = ["DEVREOTES LAB RESEARCH ASSISTANT — Chat Export\n" + "="*50 + "\n"]
     for msg in chat_history:
         if isinstance(msg, dict):
-            role = msg.get("role", "unknown").upper()
-            content = msg.get("content", "")
-            lines.append(f"\n{role}:\n{content}\n")
+            lines.append(f"\n{msg.get('role','').upper()}:\n{msg.get('content','')}\n")
     path = "/tmp/chat_export.txt"
     with open(path, "w") as f: f.write("\n".join(lines))
     return path
@@ -365,24 +324,43 @@ def export_chat(chat_history):
 
 def load_analytics():
     with driver.session() as session:
-        paper_count = session.run("MATCH (p:Paper) RETURN count(p) AS c").single()["c"]
-        protein_count = session.run("MATCH (n:Protein) RETURN count(n) AS c").single()["c"]
-        method_count = session.run("MATCH (n:Method) RETURN count(n) AS c").single()["c"]
-        concept_count = session.run("MATCH (n:Concept) RETURN count(n) AS c").single()["c"]
-        organism_count = session.run("MATCH (n:Organism) RETURN count(n) AS c").single()["c"]
-        rel_count = session.run("MATCH ()-[r]->() RETURN count(r) AS c").single()["c"]
+        pc = session.run("MATCH (p:Paper) RETURN count(p) AS c").single()["c"]
+        prc = session.run("MATCH (n:Protein) RETURN count(n) AS c").single()["c"]
+        mc = session.run("MATCH (n:Method) RETURN count(n) AS c").single()["c"]
+        cc = session.run("MATCH (n:Concept) RETURN count(n) AS c").single()["c"]
+        oc = session.run("MATCH (n:Organism) RETURN count(n) AS c").single()["c"]
+        rc = session.run("MATCH ()-[r]->() RETURN count(r) AS c").single()["c"]
         decades = session.run("MATCH (p:Paper) WHERE p.year > 0 RETURN (p.year / 10) * 10 AS decade, count(p) AS count ORDER BY decade")
-        decade_lines = []
-        for r in decades:
-            bar = "█" * (r["count"] // 2)
-            decade_lines.append(f"  {r['decade']}s: {bar} {r['count']}")
-        top_proteins = session.run("MATCH (p:Paper)-[:MENTIONS_PROTEIN]->(pr:Protein) RETURN pr.name AS name, count(p) AS c ORDER BY c DESC LIMIT 5")
-        protein_lines = [f"  {r['name']}: {'█' * (r['c'] // 3)} {r['c']}" for r in top_proteins]
-        top_methods = session.run("MATCH (p:Paper)-[:USES_METHOD]->(m:Method) RETURN m.name AS name, count(p) AS c ORDER BY c DESC LIMIT 5")
-        method_lines = [f"  {r['name']}: {'█' * (r['c'] // 2)} {r['c']}" for r in top_methods]
-        top_concepts = session.run("MATCH (p:Paper)-[:EXPLORES_CONCEPT]->(c:Concept) RETURN c.name AS name, count(p) AS cnt ORDER BY cnt DESC LIMIT 5")
-        concept_lines = [f"  {r['name']}: {'█' * (r['cnt'] // 5)} {r['cnt']}" for r in top_concepts]
-    return (f"**Graph Overview**\n- Papers: **{paper_count}**\n- Proteins: **{protein_count}**\n- Methods: **{method_count}**\n- Concepts: **{concept_count}**\n- Organisms: **{organism_count}**\n- Relationships: **{rel_count}**\n\n**Papers by Decade**\n```\n" + "\n".join(decade_lines) + "\n```\n\n**Top Proteins**\n```\n" + "\n".join(protein_lines) + "\n```\n\n**Top Methods**\n```\n" + "\n".join(method_lines) + "\n```\n\n**Top Concepts**\n```\n" + "\n".join(concept_lines) + "\n```")
+        decade_lines = [f"  {r['decade']}s: {'█' * (r['count'] // 2)} {r['count']}" for r in decades]
+        top_p = session.run("MATCH (p:Paper)-[:MENTIONS_PROTEIN]->(pr:Protein) RETURN pr.name AS name, count(p) AS c ORDER BY c DESC LIMIT 5")
+        p_lines = [f"  {r['name']}: {'█' * (r['c'] // 3)} {r['c']}" for r in top_p]
+        top_m = session.run("MATCH (p:Paper)-[:USES_METHOD]->(m:Method) RETURN m.name AS name, count(p) AS c ORDER BY c DESC LIMIT 5")
+        m_lines = [f"  {r['name']}: {'█' * (r['c'] // 2)} {r['c']}" for r in top_m]
+        top_c = session.run("MATCH (p:Paper)-[:EXPLORES_CONCEPT]->(c:Concept) RETURN c.name AS name, count(p) AS cnt ORDER BY cnt DESC LIMIT 5")
+        c_lines = [f"  {r['name']}: {'█' * (r['cnt'] // 5)} {r['cnt']}" for r in top_c]
+    return f"**Overview**\n- Papers: **{pc}** | Proteins: **{prc}** | Methods: **{mc}**\n- Concepts: **{cc}** | Organisms: **{oc}** | Links: **{rc}**\n\n**Papers by Decade**\n```\n" + "\n".join(decade_lines) + "\n```\n\n**Top Proteins**\n```\n" + "\n".join(p_lines) + "\n```\n\n**Top Methods**\n```\n" + "\n".join(m_lines) + "\n```\n\n**Top Concepts**\n```\n" + "\n".join(c_lines) + "\n```"
+
+
+def lookup_paper(paper_num_str):
+    if not paper_num_str: return "Select a paper number to view details."
+    pnum = re.sub(r'[^0-9]', '', str(paper_num_str))
+    if not pnum: return "Enter a valid paper number."
+    with driver.session() as session:
+        result = session.run("MATCH (p:Paper {number: $num}) OPTIONAL MATCH (p)-[r1:MENTIONS_PROTEIN]->(pr:Protein) OPTIONAL MATCH (p)-[r2:USES_METHOD]->(m:Method) OPTIONAL MATCH (p)-[r3:EXPLORES_CONCEPT]->(c:Concept) OPTIONAL MATCH (p)-[r4:USES_ORGANISM]->(o:Organism) RETURN p.title AS title, p.year AS year, p.journal AS journal, p.authors AS authors, p.key_findings AS findings, collect(DISTINCT pr.name) AS proteins, collect(DISTINCT m.name) AS methods, collect(DISTINCT c.name) AS concepts, collect(DISTINCT o.name) AS organisms", num=pnum)
+        record = result.single()
+        if not record: return f"Paper #{pnum} not found in the knowledge base."
+        title = record['title'] or 'Unknown'
+        search_url = f"https://scholar.google.com/scholar?q={'+'.join(title.split()[:10])}"
+        return (f"**Paper #{pnum}** ({record['year']})\n\n"
+                f"**Title:** {title}\n\n"
+                f"**Journal:** {record['journal'] or 'N/A'}\n\n"
+                f"**Authors:** {record['authors'] or 'N/A'}\n\n"
+                f"**Key Findings:** {record['findings'] or 'N/A'}\n\n"
+                f"**Proteins:** {', '.join(record['proteins']) if record['proteins'] else 'None'}\n\n"
+                f"**Methods:** {', '.join(record['methods']) if record['methods'] else 'None'}\n\n"
+                f"**Concepts:** {', '.join(record['concepts']) if record['concepts'] else 'None'}\n\n"
+                f"**Organisms:** {', '.join(record['organisms']) if record['organisms'] else 'None'}\n\n"
+                f"[🔗 Find on Google Scholar]({search_url})")
 
 
 search_history = {}
@@ -445,52 +423,40 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
             </div>
             <div style="position: relative; text-align: center;">
                 <div style="font-size: 22px; font-weight: 700; color: #e8f0fe; letter-spacing: -0.5px; font-family: 'Georgia', serif;">
-                    Devreotes Lab Research Assistant
-                </div>
+                    Devreotes Lab Research Assistant</div>
                 <div style="font-size: 12px; color: #4facfe; font-weight: 500; letter-spacing: 1px; margin-top: 2px; text-transform: uppercase;">
-                    GraphRAG &middot; 238 Papers &middot; Johns Hopkins University School of Medicine
-                </div>
+                    GraphRAG &middot; 238 Papers &middot; Johns Hopkins University School of Medicine</div>
             </div>
         </div>
     """)
 
     with gr.Row():
+        # LEFT SIDEBAR
         with gr.Column(scale=1, min_width=220):
             gr.HTML("""<div style="padding: 12px;">
                 <div style="color: #4facfe; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px;">Knowledge Graph</div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                    <div style="background: #111d30; border: 1px solid rgba(79,172,254,0.12); border-radius: 10px; padding: 12px; text-align: center;">
-                        <div style="font-size: 22px; font-weight: 700; color: #4facfe;">238</div>
-                        <div style="font-size: 9px; color: #5a6d85; text-transform: uppercase;">Papers</div></div>
-                    <div style="background: #111d30; border: 1px solid rgba(79,172,254,0.12); border-radius: 10px; padding: 12px; text-align: center;">
-                        <div style="font-size: 22px; font-weight: 700; color: #4facfe;">738</div>
-                        <div style="font-size: 9px; color: #5a6d85; text-transform: uppercase;">Proteins</div></div>
-                    <div style="background: #111d30; border: 1px solid rgba(79,172,254,0.12); border-radius: 10px; padding: 12px; text-align: center;">
-                        <div style="font-size: 22px; font-weight: 700; color: #4facfe;">531</div>
-                        <div style="font-size: 9px; color: #5a6d85; text-transform: uppercase;">Methods</div></div>
-                    <div style="background: #111d30; border: 1px solid rgba(79,172,254,0.12); border-radius: 10px; padding: 12px; text-align: center;">
-                        <div style="font-size: 22px; font-weight: 700; color: #4facfe;">329</div>
-                        <div style="font-size: 9px; color: #5a6d85; text-transform: uppercase;">Concepts</div></div>
+                    <div style="background: #111d30; border: 1px solid rgba(79,172,254,0.12); border-radius: 10px; padding: 12px; text-align: center;"><div style="font-size: 22px; font-weight: 700; color: #4facfe;">238</div><div style="font-size: 9px; color: #5a6d85; text-transform: uppercase;">Papers</div></div>
+                    <div style="background: #111d30; border: 1px solid rgba(79,172,254,0.12); border-radius: 10px; padding: 12px; text-align: center;"><div style="font-size: 22px; font-weight: 700; color: #4facfe;">738</div><div style="font-size: 9px; color: #5a6d85; text-transform: uppercase;">Proteins</div></div>
+                    <div style="background: #111d30; border: 1px solid rgba(79,172,254,0.12); border-radius: 10px; padding: 12px; text-align: center;"><div style="font-size: 22px; font-weight: 700; color: #4facfe;">531</div><div style="font-size: 9px; color: #5a6d85; text-transform: uppercase;">Methods</div></div>
+                    <div style="background: #111d30; border: 1px solid rgba(79,172,254,0.12); border-radius: 10px; padding: 12px; text-align: center;"><div style="font-size: 22px; font-weight: 700; color: #4facfe;">329</div><div style="font-size: 9px; color: #5a6d85; text-transform: uppercase;">Concepts</div></div>
                 </div>
                 <div style="color: #4facfe; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; margin-top: 16px; margin-bottom: 8px;">Recent Searches</div>
             </div>""")
             history_dropdown = gr.Dropdown(choices=[], label="Click to replay", interactive=True, allow_custom_value=False)
-            gr.HTML("""<div style="padding: 0 12px;">
-                <div style="color: #4facfe; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; margin-top: 16px; margin-bottom: 8px;">📊 Analytics</div>
-            </div>""")
+            gr.HTML("""<div style="padding: 0 12px;"><div style="color: #4facfe; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; margin-top: 16px; margin-bottom: 8px;">📊 Analytics</div></div>""")
             analytics_btn = gr.Button("Load Analytics", size="sm", variant="secondary")
             analytics_display = gr.Markdown("")
 
+        # CENTER CHAT
         with gr.Column(scale=3):
-            chatbot = gr.Chatbot(height=480, show_label=False)
+            chatbot = gr.Chatbot(height=520, show_label=False)
             with gr.Row():
                 msg = gr.Textbox(placeholder="Ask about the Devreotes Lab research...", show_label=False, scale=5)
                 send_btn = gr.Button("Send", scale=1, variant="primary")
                 export_btn = gr.Button("📥 Export", scale=1, variant="secondary")
                 add_paper_btn = gr.Button("📤 Add Paper", scale=1, variant="secondary")
-
             export_file = gr.File(label="Download Chat", visible=False)
-
             with gr.Group(visible=False) as upload_section:
                 gr.HTML('<div style="color: #4facfe; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">Upload New Paper</div>')
                 with gr.Row():
@@ -503,31 +469,27 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
                 upload_result = gr.Markdown("")
                 close_upload_btn = gr.Button("✕ Close", size="sm", variant="secondary")
 
-            gr.HTML("""<div style="color: #4facfe; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; margin-top: 12px; margin-bottom: 8px;">Suggested Questions</div>""")
-            with gr.Row():
-                s1 = gr.Button("How does Ras regulate cell migration?", size="sm")
-                s2 = gr.Button("Which papers use optogenetics?", size="sm")
-            with gr.Row():
-                s3 = gr.Button("What is the role of PTEN in chemotaxis?", size="sm")
-                s4 = gr.Button("Tell me about the Warburg effect", size="sm")
-            with gr.Row():
-                s5 = gr.Button("What methods study cell polarity?", size="sm")
-                s6 = gr.Button("Papers from the 2020s", size="sm")
-
-        with gr.Column(scale=1, min_width=200):
+        # RIGHT SIDEBAR
+        with gr.Column(scale=1, min_width=220):
             gr.HTML("""<div style="padding: 12px;">
                 <div style="color: #4facfe; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px;">About the Lab</div>
-                <div style="background: #111d30; border: 1px solid rgba(79,172,254,0.12); border-radius: 12px; padding: 16px; font-size: 12px; color: #8a9bb8; line-height: 1.6;">
+                <div style="background: #111d30; border: 1px solid rgba(79,172,254,0.12); border-radius: 12px; padding: 14px; font-size: 12px; color: #8a9bb8; line-height: 1.6;">
                     <strong style="color: #d0ddf0;">Prof. Peter N. Devreotes</strong><br>Department of Cell Biology<br>Johns Hopkins School of Medicine<br><br>
                     Research spanning <strong style="color: #8ab4f8;">1975 &ndash; 2025</strong> focusing on cell migration, chemotaxis, signal transduction, and the cytoskeleton.</div>
-                <div style="color: #4facfe; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; margin-top: 20px; margin-bottom: 8px;">Top Proteins</div>
-                <div style="background: #111d30; border: 1px solid rgba(79,172,254,0.12); border-radius: 12px; padding: 16px; font-size: 11px; color: #8a9bb8; line-height: 1.8;">
-                    <span style="color: #8ab4f8;">PTEN</span> &middot; 54 papers<br><span style="color: #8ab4f8;">cAR1</span> &middot; 46 papers<br><span style="color: #8ab4f8;">Ras</span> &middot; 41 papers<br><span style="color: #8ab4f8;">PI3K</span> &middot; 26 papers<br><span style="color: #8ab4f8;">PIP3</span> &middot; 24 papers<br><span style="color: #8ab4f8;">myosin II</span> &middot; 19 papers</div>
-                <div style="color: #4facfe; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; margin-top: 20px; margin-bottom: 8px;">Top Concepts</div>
-                <div style="background: #111d30; border: 1px solid rgba(79,172,254,0.12); border-radius: 12px; padding: 16px; font-size: 11px; color: #8a9bb8; line-height: 1.8;">
-                    <span style="color: #8ab4f8;">chemotaxis</span> &middot; 149 papers<br><span style="color: #8ab4f8;">signal transduction</span> &middot; 29 papers<br><span style="color: #8ab4f8;">cAMP signaling</span> &middot; 27 papers<br><span style="color: #8ab4f8;">cell migration</span> &middot; 23 papers<br><span style="color: #8ab4f8;">cell polarity</span> &middot; 16 papers</div>
+                <div style="color: #4facfe; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; margin-top: 16px; margin-bottom: 8px;">🔎 Paper Finder</div>
             </div>""")
+            paper_input = gr.Textbox(placeholder="Enter paper # (e.g., 276)", show_label=False)
+            paper_lookup_btn = gr.Button("Look Up Paper", size="sm", variant="secondary")
+            paper_details = gr.Markdown("Enter a paper number to view its details.")
+            gr.HTML("""<div style="padding: 0 12px;"><div style="color: #4facfe; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; margin-top: 16px; margin-bottom: 8px;">💡 Try Asking</div></div>""")
+            s1 = gr.Button("How does Ras regulate cell migration?", size="sm")
+            s2 = gr.Button("Which papers use optogenetics?", size="sm")
+            s3 = gr.Button("What is the role of PTEN in chemotaxis?", size="sm")
+            s4 = gr.Button("Tell me about the Warburg effect", size="sm")
+            s5 = gr.Button("What methods study cell polarity?", size="sm")
+            s6 = gr.Button("Papers from the 2020s", size="sm")
 
+    # EVENT HANDLERS
     def respond(message, chat_history):
         bot_response = chat_fn(message, chat_history)
         chat_history.append({"role": "user", "content": message})
@@ -553,8 +515,7 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
 
     def handle_upload(file):
         preview, entities_json = process_upload(file)
-        if entities_json:
-            return preview, entities_json, gr.update(visible=True)
+        if entities_json: return preview, entities_json, gr.update(visible=True)
         return preview, "", gr.update(visible=False)
 
     upload_btn.click(handle_upload, [upload_file], [upload_preview, upload_entities_state, confirm_btn])
@@ -567,6 +528,6 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
 
     export_btn.click(handle_export, [chatbot], [export_file])
     analytics_btn.click(load_analytics, outputs=[analytics_display])
+    paper_lookup_btn.click(lookup_paper, [paper_input], [paper_details])
 
-demo.launch(share=True)
-     
+demo.launch()
