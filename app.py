@@ -6,11 +6,11 @@ import gradio as gr
 from openai import OpenAI
 from neo4j import GraphDatabase
 
-NEO4J_URI = os.environ.get("NEO4J_URI", "neo4j+s://9f45c691.databases.neo4j.io")
-NEO4J_USER = os.environ.get("NEO4J_USER", "9f45c691")
-NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD", "0Mnrcu_ZtECegn-6kYoRPNHvpYLBiOjNpqkygC4e9gM")
+NEO4J_URI = os.environ.get("NEO4J_URI", "")
+NEO4J_USER = os.environ.get("NEO4J_USER", "")
+NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD", "")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
-UPLOAD_PASSWORD = "Vharsh01#"
+UPLOAD_PASSWORD = os.environ.get("UPLOAD_PASSWORD", "Vharsh01#")
 
 os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
 client = OpenAI()
@@ -196,7 +196,7 @@ def generate_answer(question, conversation_history=None):
         messages.append({"role": "user", "content": question})
         response = client.chat.completions.create(model="gpt-4o-mini", messages=messages, temperature=0.3, max_tokens=800)
         return response.choices[0].message.content
-    corrected = correct_spelling(question)
+    corrected = correct_spelling(question) if len(question.split()) > 4 else question
     graph_context = query_graph(corrected)
     if graph_context == "NO_RESULTS":
         if conversation_history:
