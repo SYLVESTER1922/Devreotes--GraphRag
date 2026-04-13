@@ -425,7 +425,7 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
                 <div style="font-size: 22px; font-weight: 700; color: #e8f0fe; letter-spacing: -0.5px; font-family: 'Georgia', serif;">
                     Devreotes Lab Research Assistant</div>
                 <div style="font-size: 12px; color: #4facfe; font-weight: 500; letter-spacing: 1px; margin-top: 2px; text-transform: uppercase;">
-                    GraphRAG &middot; 238 Papers &middot; Johns Hopkins University School of Medicine</div>
+                    GraphRAG &middot; 235 Papers &middot; Johns Hopkins University School of Medicine</div>
             </div>
         </div>
     """)
@@ -436,7 +436,7 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
             gr.HTML("""<div style="padding: 12px;">
                 <div style="color: #4facfe; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px;">Knowledge Graph</div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                    <div style="background: #111d30; border: 1px solid rgba(79,172,254,0.12); border-radius: 10px; padding: 12px; text-align: center;"><div style="font-size: 22px; font-weight: 700; color: #4facfe;">238</div><div style="font-size: 9px; color: #5a6d85; text-transform: uppercase;">Papers</div></div>
+                    <div style="background: #111d30; border: 1px solid rgba(79,172,254,0.12); border-radius: 10px; padding: 12px; text-align: center;"><div style="font-size: 22px; font-weight: 700; color: #4facfe;">235</div></div><div style="font-size: 9px; color: #5a6d85; text-transform: uppercase;">Papers</div></div>
                     <div style="background: #111d30; border: 1px solid rgba(79,172,254,0.12); border-radius: 10px; padding: 12px; text-align: center;"><div style="font-size: 22px; font-weight: 700; color: #4facfe;">738</div><div style="font-size: 9px; color: #5a6d85; text-transform: uppercase;">Proteins</div></div>
                     <div style="background: #111d30; border: 1px solid rgba(79,172,254,0.12); border-radius: 10px; padding: 12px; text-align: center;"><div style="font-size: 22px; font-weight: 700; color: #4facfe;">531</div><div style="font-size: 9px; color: #5a6d85; text-transform: uppercase;">Methods</div></div>
                     <div style="background: #111d30; border: 1px solid rgba(79,172,254,0.12); border-radius: 10px; padding: 12px; text-align: center;"><div style="font-size: 22px; font-weight: 700; color: #4facfe;">329</div><div style="font-size: 9px; color: #5a6d85; text-transform: uppercase;">Concepts</div></div>
