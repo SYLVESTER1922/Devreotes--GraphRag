@@ -164,11 +164,12 @@ RULES:
 2. Keep responses concise - 2-4 sentences for simple questions, more only when necessary.
 3. Always cite paper numbers (e.g., "Paper #276").
 4. If the information is not in the graph context or conversation history, say: "This information is not available in the Devreotes Lab knowledge base."
-5. NEVER suggest topics or information outside the knowledge base.
-6. When listing papers, keep descriptions brief.
-7. Highlight connections between papers when relevant.
-8. If a follow-up references something already discussed, answer from conversation history.
-9. If asked to summarize a previous answer, rewrite concisely without adding new information."""
+5. ALWAYS cite specific papers from the graph context. Never give generic textbook definitions without paper citations.
+6. NEVER suggest topics or information outside the knowledge base.
+7. When listing papers, keep descriptions brief.
+8. Highlight connections between papers when relevant.
+9. If a follow-up references something already discussed, answer from conversation history.
+10. If asked to summarize a previous answer, rewrite concisely without adding new information."""
 
 GREETING_WORDS = {'hi','hello','hey','good morning','good afternoon','good evening','howdy','greetings','sup','yo',"what's up",'whats up','hola'}
 
@@ -188,7 +189,10 @@ def generate_answer(question, conversation_history=None):
         for turn in conversation_history[-8:]: messages.append(turn)
     is_conversational = False
     if conversation_history:
-        ref_words = ['this','these','those','them','they','it','that','above','previous','mentioned','you said','you mentioned','the same','where do i find','when was','when were','who wrote','which year','how many of','more about','tell me more','elaborate','go on','continue','what else','which ones','specifically','in detail','expand on']
+        ref_words = ['this','these','those','them','they','it','that','above',
+                     'previous','mentioned','you said','you mentioned','the same',
+                     'where do i find','where is','where are','where can',
+                     'when was','when were','who wrote','which year',
         summary_words = ['summarize','summary','in short','briefly','define this','in a summary','short version','simplify','simpler terms','in a nutshell','quick summary','shorter']
         if any(word in question_stripped for word in summary_words): is_conversational = True
         elif len(question.split()) <= 8 and any(word in question_stripped for word in ref_words): is_conversational = True
