@@ -530,4 +530,4 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
     analytics_btn.click(load_analytics, outputs=[analytics_display])
     paper_lookup_btn.click(lookup_paper, [paper_input], [paper_details])
 
-demo.launch()
+demo.launch(share=False, server_name="0.0.0.0", server_port=7860)
