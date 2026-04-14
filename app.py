@@ -84,7 +84,11 @@ def query_graph(question):
                     context_parts.append("TOP PROTEINS:")
                     for r in records: context_parts.append(f"  {r['name']}: {r['papers']} papers")
             elif any(w in question_lower for w in ['method', 'technique']):
-                result = session.run("MATCH (p:Paper)-[:USES_METHOD]->(m:Method) RETURN m.name AS name, count(p) AS papers ORDER BY papers DESC LIMIT 20")
+            result = session.run("MATCH (p:Paper)-[:MENTIONS_PROTEIN]->(pr:Protein) RETURN pr.name AS name, count(p) AS papers ORDER BY papers DESC LIMIT 20")
+                records = list(result)
+                if records:
+                    context_parts.append("TOP PROTEINS/GENES BY PAPER COUNT:")
+                    for r in records: context_parts.append(f"  {r['name']}: {r['papers']} papers")
                 records = list(result)
                 if records:
                     context_parts.append("TOP METHODS:")
@@ -125,7 +129,7 @@ def query_graph(question):
             if len(kw_lower) >= 5: search_terms.extend([kw_lower[1:], kw_lower[:-1]])
             for term in search_terms:
                 found = False
-                for rel, node, label in [("MENTIONS_PROTEIN","Protein","protein"),("USES_METHOD","Method","method"),("EXPLORES_CONCEPT","Concept","concept"),("USES_ORGANISM","Organism","organism")]:
+             for rel, node, label in [("MENTIONS_PROTEIN","Protein","protein"),("MENTIONS_GENE","Gene","gene"),("USES_METHOD","Method","method"),("EXPLORES_CONCEPT","Concept","concept"),("USES_ORGANISM","Organism","organism")]:
                     result = session.run(f"MATCH (p:Paper)-[r:{rel}]->(n:{node}) WHERE toLower(n.name) CONTAINS $q RETURN p.number AS paper_num, p.title AS title, p.year AS year, n.name AS entity, r.context AS context ORDER BY p.year DESC LIMIT 10", q=term)
                     records = list(result)
                     if records:
