@@ -10,7 +10,7 @@ NEO4J_URI = os.environ.get("NEO4J_URI", "")
 NEO4J_USER = os.environ.get("NEO4J_USER", "")
 NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD", "")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
-UPLOAD_PASSWORD = os.environ.get("UPLOAD_PASSWORD", "Vharsh01#")
+UPLOAD_PASSWORD = os.environ.get("UPLOAD_PASSWORD", "")
 
 os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
 client = OpenAI()
@@ -38,7 +38,8 @@ def query_graph(question):
     seen_papers = set()
     with driver.session() as session:
         paper_numbers = re.findall(r'#(\d{1,3})\b', question)
-        if not paper_numbers: paper_numbers = re.findall(r'paper\s+(\d{1,3})\b', question_lower)
+        if not paper_numbers:
+            paper_numbers = re.findall(r'paper\s+(\d{1,3})\b', question_lower)
         if paper_numbers:
             for pnum in paper_numbers[:10]:
                 result = session.run("MATCH (p:Paper {number: $num}) OPTIONAL MATCH (p)-[r1:MENTIONS_PROTEIN]->(pr:Protein) OPTIONAL MATCH (p)-[r2:USES_METHOD]->(m:Method) OPTIONAL MATCH (p)-[r3:EXPLORES_CONCEPT]->(c:Concept) OPTIONAL MATCH (p)-[r4:USES_ORGANISM]->(o:Organism) RETURN p.number AS paper_num, p.title AS title, p.year AS year, p.key_findings AS findings, p.journal AS journal, p.authors AS authors, collect(DISTINCT pr.name) AS proteins, collect(DISTINCT m.name) AS methods, collect(DISTINCT c.name) AS concepts, collect(DISTINCT o.name) AS organisms", num=pnum)
@@ -76,42 +77,43 @@ def query_graph(question):
                     if r['paper_num'] not in seen_papers:
                         context_parts.append(f"  Paper #{r['paper_num']} ({r['year']}): '{r['title']}' — Concepts: {r['concepts']}")
                         seen_papers.add(r['paper_num'])
-        if any(phrase in question_lower for phrase in ['list all', 'show all', 'all proteins', 'all methods', 'all concepts', 'all organisms', 'top proteins', 'top methods', 'top concepts', 'most studied', 'most used', 'most common', 'most mentioned', 'frequently']):
+        if any(phrase in question_lower for phrase in ['list all', 'show all', 'all proteins', 'all methods', 'all concepts', 'all organisms', 'all genes', 'top proteins', 'top methods', 'top concepts', 'top genes', 'most studied', 'most used', 'most common', 'most mentioned', 'frequently']):
             if any(w in question_lower for w in ['protein', 'gene']):
                 result = session.run("MATCH (p:Paper)-[:MENTIONS_PROTEIN]->(pr:Protein) RETURN pr.name AS name, count(p) AS papers ORDER BY papers DESC LIMIT 20")
                 records = list(result)
                 if records:
-                    context_parts.append("TOP PROTEINS:")
-                    for r in records: context_parts.append(f"  {r['name']}: {r['papers']} papers")
-            elif any(w in question_lower for w in ['method', 'technique']):
-            result = session.run("MATCH (p:Paper)-[:MENTIONS_PROTEIN]->(pr:Protein) RETURN pr.name AS name, count(p) AS papers ORDER BY papers DESC LIMIT 20")
-                records = list(result)
-                if records:
                     context_parts.append("TOP PROTEINS/GENES BY PAPER COUNT:")
-                    for r in records: context_parts.append(f"  {r['name']}: {r['papers']} papers")
+                    for r in records:
+                        context_parts.append(f"  {r['name']}: {r['papers']} papers")
+            elif any(w in question_lower for w in ['method', 'technique']):
+                result = session.run("MATCH (p:Paper)-[:USES_METHOD]->(m:Method) RETURN m.name AS name, count(p) AS papers ORDER BY papers DESC LIMIT 20")
                 records = list(result)
                 if records:
                     context_parts.append("TOP METHODS:")
-                    for r in records: context_parts.append(f"  {r['name']}: {r['papers']} papers")
+                    for r in records:
+                        context_parts.append(f"  {r['name']}: {r['papers']} papers")
             elif any(w in question_lower for w in ['concept', 'topic', 'theme']):
                 result = session.run("MATCH (p:Paper)-[:EXPLORES_CONCEPT]->(c:Concept) RETURN c.name AS name, count(p) AS papers ORDER BY papers DESC LIMIT 20")
                 records = list(result)
                 if records:
                     context_parts.append("TOP CONCEPTS:")
-                    for r in records: context_parts.append(f"  {r['name']}: {r['papers']} papers")
+                    for r in records:
+                        context_parts.append(f"  {r['name']}: {r['papers']} papers")
             elif any(w in question_lower for w in ['organism', 'species', 'model']):
                 result = session.run("MATCH (p:Paper)-[:USES_ORGANISM]->(o:Organism) RETURN o.name AS name, count(p) AS papers ORDER BY papers DESC LIMIT 20")
                 records = list(result)
                 if records:
                     context_parts.append("TOP ORGANISMS:")
-                    for r in records: context_parts.append(f"  {r['name']}: {r['papers']} papers")
+                    for r in records:
+                        context_parts.append(f"  {r['name']}: {r['papers']} papers")
             else:
                 for label, rel, node in [("PROTEINS","MENTIONS_PROTEIN","Protein"),("METHODS","USES_METHOD","Method"),("CONCEPTS","EXPLORES_CONCEPT","Concept")]:
                     result = session.run(f"MATCH (p:Paper)-[:{rel}]->(n:{node}) RETURN n.name AS name, count(p) AS papers ORDER BY papers DESC LIMIT 10")
                     records = list(result)
                     if records:
                         context_parts.append(f"TOP {label}:")
-                        for r in records: context_parts.append(f"  {r['name']}: {r['papers']} papers")
+                        for r in records:
+                            context_parts.append(f"  {r['name']}: {r['papers']} papers")
         if any(phrase in question_lower for phrase in ['connected to', 'connection between', 'related to', 'relationship between', 'link between']):
             if len(keywords) >= 2:
                 kw1, kw2 = keywords[0].lower(), keywords[1].lower()
@@ -126,10 +128,11 @@ def query_graph(question):
         for kw in keywords:
             kw_lower = kw.lower()
             search_terms = [kw_lower]
-            if len(kw_lower) >= 5: search_terms.extend([kw_lower[1:], kw_lower[:-1]])
+            if len(kw_lower) >= 5:
+                search_terms.extend([kw_lower[1:], kw_lower[:-1]])
             for term in search_terms:
                 found = False
-             for rel, node, label in [("MENTIONS_PROTEIN","Protein","protein"),("MENTIONS_GENE","Gene","gene"),("USES_METHOD","Method","method"),("EXPLORES_CONCEPT","Concept","concept"),("USES_ORGANISM","Organism","organism")]:
+                for rel, node, label in [("MENTIONS_PROTEIN","Protein","protein"),("MENTIONS_GENE","Gene","gene"),("USES_METHOD","Method","method"),("EXPLORES_CONCEPT","Concept","concept"),("USES_ORGANISM","Organism","organism")]:
                     result = session.run(f"MATCH (p:Paper)-[r:{rel}]->(n:{node}) WHERE toLower(n.name) CONTAINS $q RETURN p.number AS paper_num, p.title AS title, p.year AS year, n.name AS entity, r.context AS context ORDER BY p.year DESC LIMIT 10", q=term)
                     records = list(result)
                     if records:
@@ -138,8 +141,10 @@ def query_graph(question):
                             if r['paper_num'] not in seen_papers:
                                 context_parts.append(f"  Paper #{r['paper_num']} ({r['year']}): '{r['title']}' — {r['entity']}: {r['context']}")
                                 seen_papers.add(r['paper_num'])
-                        found = True; break
-                if found: break
+                        found = True
+                        break
+                if found:
+                    break
         for kw in keywords:
             result = session.run("MATCH (p:Paper) WHERE toLower(p.title) CONTAINS $q OR toLower(p.key_findings) CONTAINS $q OPTIONAL MATCH (p)-[:MENTIONS_PROTEIN]->(pr:Protein) OPTIONAL MATCH (p)-[:USES_METHOD]->(m:Method) OPTIONAL MATCH (p)-[:EXPLORES_CONCEPT]->(c:Concept) RETURN p.number AS paper_num, p.title AS title, p.year AS year, p.key_findings AS findings, collect(DISTINCT pr.name) AS proteins, collect(DISTINCT m.name) AS methods, collect(DISTINCT c.name) AS concepts LIMIT 5", q=kw.lower())
             records = list(result)
@@ -152,17 +157,17 @@ def query_graph(question):
                         seen_papers.add(r['paper_num'])
         if any(word in question_lower for word in ['how many', 'total', 'overview', 'statistics', 'stat']):
             counts = {}
-            for label in ['Paper','Protein','Method','Concept','Organism']:
+            for label in ['Paper', 'Protein', 'Gene', 'Method', 'Concept', 'Organism']:
                 result = session.run(f"MATCH (n:{label}) RETURN count(n) AS count")
                 counts[label] = result.single()["count"]
             result = session.run("MATCH ()-[r]->() RETURN count(r) AS count")
             counts['Relationships'] = result.single()["count"]
-            context_parts.append(f"\nGRAPH STATISTICS:\n  Papers: {counts['Paper']}\n  Proteins: {counts['Protein']}\n  Methods: {counts['Method']}\n  Concepts: {counts['Concept']}\n  Organisms: {counts['Organism']}\n  Relationships: {counts['Relationships']}")
+            context_parts.append(f"\nGRAPH STATISTICS:\n  Papers: {counts['Paper']}\n  Proteins: {counts['Protein']}\n  Genes: {counts['Gene']}\n  Methods: {counts['Method']}\n  Concepts: {counts['Concept']}\n  Organisms: {counts['Organism']}\n  Relationships: {counts['Relationships']}")
     return "\n".join(context_parts) if context_parts else "NO_RESULTS"
 
 
 SYSTEM_PROMPT = """You are the Devreotes Lab Research Assistant, a specialized AI for Professor Peter Devreotes' lab at Johns Hopkins University School of Medicine.
-The knowledge graph contains 238 papers (1975-2025), 738 proteins, 531 methods, 329 concepts, and 225 organisms connected by 3,649 relationships.
+The knowledge graph contains 235 papers (1975-2025), 738 proteins/genes, 531 methods, 330 concepts, and 228 organisms connected by thousands of relationships.
 RULES:
 1. Answer in your own words from the provided graph context. Synthesize naturally.
 2. Keep responses concise - 2-4 sentences for simple questions, more only when necessary.
@@ -179,27 +184,30 @@ GREETING_WORDS = {'hi','hello','hey','good morning','good afternoon','good eveni
 
 
 def generate_answer(question, conversation_history=None):
-    if not question or not question.strip(): return "Please type a question to get started."
+    if not question or not question.strip():
+        return "Please type a question to get started."
     question_stripped = question.strip().lower().rstrip('!?.,:;')
     if question_stripped in GREETING_WORDS or any(question_stripped.startswith(g) for g in GREETING_WORDS):
-        return "Hello! I'm the Devreotes Lab Research Assistant — ask me anything about Professor Devreotes' 238 published papers on cell migration, chemotaxis, and signal transduction."
+        return "Hello! I'm the Devreotes Lab Research Assistant — ask me anything about Professor Devreotes' 235 published papers on cell migration, chemotaxis, and signal transduction."
     off_topic_triggers = ['how are you','who are you','what are you','your name','what can you do','help me']
     if any(trigger in question_stripped for trigger in off_topic_triggers):
-        return "I'm the Devreotes Lab Research Assistant. I can answer questions about proteins, methods, concepts, and organisms from 238 research papers spanning 1975 to 2025."
-    if 'thank' in question_stripped: return "You're welcome! Feel free to ask more."
-    if 'bye' in question_stripped or 'goodbye' in question_stripped: return "Goodbye! Come back anytime."
+        return "I'm the Devreotes Lab Research Assistant. I can answer questions about proteins, genes, methods, concepts, and organisms from 235 research papers spanning 1975 to 2025."
+    if 'thank' in question_stripped:
+        return "You're welcome! Feel free to ask more."
+    if 'bye' in question_stripped or 'goodbye' in question_stripped:
+        return "Goodbye! Come back anytime."
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     if conversation_history:
-        for turn in conversation_history[-8:]: messages.append(turn)
+        for turn in conversation_history[-8:]:
+            messages.append(turn)
     is_conversational = False
     if conversation_history:
-        ref_words = ['this','these','those','them','they','it','that','above',
-                     'previous','mentioned','you said','you mentioned','the same',
-                     'where do i find','where is','where are','where can',
-                     'when was','when were','who wrote','which year']
+        ref_words = ['this','these','those','them','they','it','that','above','previous','mentioned','you said','you mentioned','the same','where do i find','where is','where are','where can','when was','when were','who wrote','which year','how many of','more about','tell me more','elaborate','go on','continue','what else','which ones','specifically','in detail','expand on']
         summary_words = ['summarize','summary','in short','briefly','define this','in a summary','short version','simplify','simpler terms','in a nutshell','quick summary','shorter']
-        if any(word in question_stripped for word in summary_words): is_conversational = True
-        elif len(question.split()) <= 8 and any(word in question_stripped for word in ref_words): is_conversational = True
+        if any(word in question_stripped for word in summary_words):
+            is_conversational = True
+        elif len(question.split()) <= 8 and any(word in question_stripped for word in ref_words):
+            is_conversational = True
     if is_conversational:
         messages.append({"role": "user", "content": question})
         response = client.chat.completions.create(model="gpt-4o-mini", messages=messages, temperature=0.3, max_tokens=800)
@@ -211,7 +219,8 @@ def generate_answer(question, conversation_history=None):
             messages.append({"role": "user", "content": question})
             response = client.chat.completions.create(model="gpt-4o-mini", messages=messages, temperature=0.3, max_tokens=800)
             answer = response.choices[0].message.content
-            if "not available" not in answer.lower() and "don't have" not in answer.lower(): return answer
+            if "not available" not in answer.lower() and "don't have" not in answer.lower():
+                return answer
         return "This information is not available in the Devreotes Lab knowledge base."
     messages.append({"role": "user", "content": f"Based on the following knowledge graph data, answer the question.\n\nGRAPH CONTEXT:\n{graph_context}\n\nQUESTION: {question}"})
     response = client.chat.completions.create(model="gpt-4o-mini", messages=messages, temperature=0.3, max_tokens=800)
@@ -227,48 +236,62 @@ Set is_cell_biology to true ONLY if related to cell biology, signal transduction
 def extract_text_from_pdf(file_path):
     doc = fitz.open(file_path)
     text = ""
-    for page in doc: text += page.get_text()
+    for page in doc:
+        text += page.get_text()
     doc.close()
     return text.strip()
 
 
 def extract_entities_from_text(text):
     truncated = text[:15000]
-    if len(text) > 15000: truncated += "\n...\n" + text[-3000:]
+    if len(text) > 15000:
+        truncated += "\n...\n" + text[-3000:]
     try:
         response = client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "system", "content": EXTRACTION_PROMPT}, {"role": "user", "content": truncated}], max_tokens=3000, temperature=0, response_format={"type": "json_object"})
         return json.loads(response.choices[0].message.content)
-    except: return None
+    except:
+        return None
 
 
 def escape_cypher(text):
-    if not text: return ""
+    if not text:
+        return ""
     return text.replace("\\", "\\\\").replace("'", "\\'").replace('"', '\\"')
 
 
 def load_paper_to_graph(paper_num, entities):
-    e = entities; statements = []
-    title = escape_cypher(e.get("title", f"Paper {paper_num}")); year = e.get("year", 0)
-    journal = escape_cypher(e.get("journal", "Unknown")); key_findings = escape_cypher(e.get("key_findings", ""))
+    e = entities
+    statements = []
+    title = escape_cypher(e.get("title", f"Paper {paper_num}"))
+    year = e.get("year", 0)
+    journal = escape_cypher(e.get("journal", "Unknown"))
+    key_findings = escape_cypher(e.get("key_findings", ""))
     authors = escape_cypher(", ".join(e.get("authors", [])))
     statements.append(f"MERGE (p:Paper {{number: '{paper_num}'}}) SET p.title = '{title}', p.year = {year}, p.journal = '{journal}', p.key_findings = '{key_findings}', p.authors = '{authors}';")
     for protein in e.get("proteins", []):
-        n = escape_cypher(protein["name"]); c = escape_cypher(protein.get("context", ""))
+        n = escape_cypher(protein["name"])
+        c = escape_cypher(protein.get("context", ""))
         statements.append(f"MERGE (pr:Protein {{name: '{n}'}}) WITH pr MATCH (p:Paper {{number: '{paper_num}'}}) MERGE (p)-[:MENTIONS_PROTEIN {{context: '{c}'}}]->(pr);")
+        statements.append(f"MERGE (g:Gene {{name: '{n}'}}) WITH g MATCH (p:Paper {{number: '{paper_num}'}}) MERGE (p)-[:MENTIONS_GENE {{context: '{c}'}}]->(g);")
     for method in e.get("methods", []):
-        n = escape_cypher(method["name"]); c = escape_cypher(method.get("context", ""))
+        n = escape_cypher(method["name"])
+        c = escape_cypher(method.get("context", ""))
         statements.append(f"MERGE (m:Method {{name: '{n}'}}) WITH m MATCH (p:Paper {{number: '{paper_num}'}}) MERGE (p)-[:USES_METHOD {{context: '{c}'}}]->(m);")
     for concept in e.get("concepts", []):
-        n = escape_cypher(concept["name"]); c = escape_cypher(concept.get("context", ""))
+        n = escape_cypher(concept["name"])
+        c = escape_cypher(concept.get("context", ""))
         statements.append(f"MERGE (c:Concept {{name: '{n}'}}) WITH c MATCH (p:Paper {{number: '{paper_num}'}}) MERGE (p)-[:EXPLORES_CONCEPT {{context: '{c}'}}]->(c);")
     for organism in e.get("model_organisms", []):
-        n = escape_cypher(organism["name"]); c = escape_cypher(organism.get("context", ""))
+        n = escape_cypher(organism["name"])
+        c = escape_cypher(organism.get("context", ""))
         statements.append(f"MERGE (o:Organism {{name: '{n}'}}) WITH o MATCH (p:Paper {{number: '{paper_num}'}}) MERGE (p)-[:USES_ORGANISM {{context: '{c}'}}]->(o);")
     errors = []
     with driver.session() as session:
         for stmt in statements:
-            try: session.run(stmt)
-            except Exception as ex: errors.append(str(ex))
+            try:
+                session.run(stmt)
+            except Exception as ex:
+                errors.append(str(ex))
     return len(statements), errors
 
 
@@ -280,30 +303,40 @@ def get_next_paper_number():
 
 
 def process_upload(file):
-    if file is None: return "❌ No file uploaded.", ""
-    try: text = extract_text_from_pdf(file.name)
-    except Exception as ex: return f"❌ Failed to read PDF: {ex}", ""
-    if len(text) < 200: return "❌ Could not extract enough text. May be a scanned document.", ""
+    if file is None:
+        return "❌ No file uploaded.", ""
+    try:
+        text = extract_text_from_pdf(file.name)
+    except Exception as ex:
+        return f"❌ Failed to read PDF: {ex}", ""
+    if len(text) < 200:
+        return "❌ Could not extract enough text. May be a scanned document.", ""
     entities = extract_entities_from_text(text)
-    if not entities: return "❌ Failed to extract entities.", ""
+    if not entities:
+        return "❌ Failed to extract entities.", ""
     relevance_note = ""
     if not entities.get("is_cell_biology", False):
         relevance_note = "\n\n⚠️ **Note:** This paper may not be directly related to the Devreotes Lab research areas.\n"
-    title = entities.get("title", "Unknown"); year = entities.get("year", "Unknown")
+    title = entities.get("title", "Unknown")
+    year = entities.get("year", "Unknown")
     proteins = [p["name"] for p in entities.get("proteins", [])]
     methods = [m["name"] for m in entities.get("methods", [])]
     concepts = [c["name"] for c in entities.get("concepts", [])]
     organisms = [o["name"] for o in entities.get("model_organisms", [])]
     findings = entities.get("key_findings", "")
-    preview = f"📄 **{title}** ({year})\n\n**Proteins:** {', '.join(proteins) if proteins else 'None'}\n\n**Methods:** {', '.join(methods) if methods else 'None'}\n\n**Concepts:** {', '.join(concepts) if concepts else 'None'}\n\n**Organisms:** {', '.join(organisms) if organisms else 'None'}\n\n**Key findings:** {findings}{relevance_note}\n\n---\n*Enter password and click 'Add to Graph' to add this paper.*"
+    preview = f"📄 **{title}** ({year})\n\n**Proteins/Genes:** {', '.join(proteins) if proteins else 'None'}\n\n**Methods:** {', '.join(methods) if methods else 'None'}\n\n**Concepts:** {', '.join(concepts) if concepts else 'None'}\n\n**Organisms:** {', '.join(organisms) if organisms else 'None'}\n\n**Key findings:** {findings}{relevance_note}\n\n---\n*Enter password and click 'Add to Graph' to add this paper.*"
     return preview, json.dumps(entities)
 
 
 def confirm_upload(entities_json, password):
-    if password != UPLOAD_PASSWORD: return "❌ Incorrect password.", gr.update(visible=True)
-    if not entities_json: return "❌ No paper to confirm.", gr.update(visible=True)
-    try: entities = json.loads(entities_json)
-    except: return "❌ Invalid data. Re-upload.", gr.update(visible=True)
+    if password != UPLOAD_PASSWORD:
+        return "❌ Incorrect password.", gr.update(visible=True)
+    if not entities_json:
+        return "❌ No paper to confirm.", gr.update(visible=True)
+    try:
+        entities = json.loads(entities_json)
+    except:
+        return "❌ Invalid data. Re-upload.", gr.update(visible=True)
     title = entities.get("title", "")
     with driver.session() as session:
         result = session.run("MATCH (p:Paper) WHERE toLower(p.title) CONTAINS $t RETURN p.number AS num, p.title AS title, p.year AS year LIMIT 3", t=title[:50].lower())
@@ -313,20 +346,25 @@ def confirm_upload(entities_json, password):
             return f"⚠️ **Similar paper(s) already exist:**\n\n{dup_list}\n\nPaper NOT added.", gr.update(visible=True)
     paper_num = get_next_paper_number()
     loaded, errors = load_paper_to_graph(paper_num, entities)
-    n_p = len(entities.get("proteins", [])); n_m = len(entities.get("methods", []))
-    n_c = len(entities.get("concepts", [])); n_o = len(entities.get("model_organisms", []))
-    if errors: return f"⚠️ Paper #{paper_num} added with {len(errors)} errors.", gr.update(visible=False)
-    return f"✅ **Paper #{paper_num} added!**\n\n**Title:** {entities.get('title','')}\n\n**Added:** {n_p} proteins, {n_m} methods, {n_c} concepts, {n_o} organisms\n\nNow queryable in the chatbot.", gr.update(visible=False)
+    n_p = len(entities.get("proteins", []))
+    n_m = len(entities.get("methods", []))
+    n_c = len(entities.get("concepts", []))
+    n_o = len(entities.get("model_organisms", []))
+    if errors:
+        return f"⚠️ Paper #{paper_num} added with {len(errors)} errors.", gr.update(visible=False)
+    return f"✅ **Paper #{paper_num} added!**\n\n**Title:** {entities.get('title','')}\n\n**Added:** {n_p} proteins/genes, {n_m} methods, {n_c} concepts, {n_o} organisms\n\nNow queryable in the chatbot.", gr.update(visible=False)
 
 
 def export_chat(chat_history):
-    if not chat_history: return None
-    lines = ["DEVREOTES LAB RESEARCH ASSISTANT — Chat Export\n" + "="*50 + "\n"]
+    if not chat_history:
+        return None
+    lines = ["DEVREOTES LAB RESEARCH ASSISTANT — Chat Export\n" + "=" * 50 + "\n"]
     for msg in chat_history:
         if isinstance(msg, dict):
-            lines.append(f"\n{msg.get('role','').upper()}:\n{msg.get('content','')}\n")
+            lines.append(f"\n{msg.get('role', '').upper()}:\n{msg.get('content', '')}\n")
     path = "/tmp/chat_export.txt"
-    with open(path, "w") as f: f.write("\n".join(lines))
+    with open(path, "w") as f:
+        f.write("\n".join(lines))
     return path
 
 
@@ -334,6 +372,7 @@ def load_analytics():
     with driver.session() as session:
         pc = session.run("MATCH (p:Paper) RETURN count(p) AS c").single()["c"]
         prc = session.run("MATCH (n:Protein) RETURN count(n) AS c").single()["c"]
+        gc = session.run("MATCH (n:Gene) RETURN count(n) AS c").single()["c"]
         mc = session.run("MATCH (n:Method) RETURN count(n) AS c").single()["c"]
         cc = session.run("MATCH (n:Concept) RETURN count(n) AS c").single()["c"]
         oc = session.run("MATCH (n:Organism) RETURN count(n) AS c").single()["c"]
@@ -346,17 +385,20 @@ def load_analytics():
         m_lines = [f"  {r['name']}: {'█' * (r['c'] // 2)} {r['c']}" for r in top_m]
         top_c = session.run("MATCH (p:Paper)-[:EXPLORES_CONCEPT]->(c:Concept) RETURN c.name AS name, count(p) AS cnt ORDER BY cnt DESC LIMIT 5")
         c_lines = [f"  {r['name']}: {'█' * (r['cnt'] // 5)} {r['cnt']}" for r in top_c]
-    return f"**Overview**\n- Papers: **{pc}** | Proteins: **{prc}** | Methods: **{mc}**\n- Concepts: **{cc}** | Organisms: **{oc}** | Links: **{rc}**\n\n**Papers by Decade**\n```\n" + "\n".join(decade_lines) + "\n```\n\n**Top Proteins**\n```\n" + "\n".join(p_lines) + "\n```\n\n**Top Methods**\n```\n" + "\n".join(m_lines) + "\n```\n\n**Top Concepts**\n```\n" + "\n".join(c_lines) + "\n```"
+    return f"**Overview**\n- Papers: **{pc}** | Proteins: **{prc}** | Genes: **{gc}**\n- Methods: **{mc}** | Concepts: **{cc}** | Organisms: **{oc}**\n- Relationships: **{rc}**\n\n**Papers by Decade**\n```\n" + "\n".join(decade_lines) + "\n```\n\n**Top Proteins/Genes**\n```\n" + "\n".join(p_lines) + "\n```\n\n**Top Methods**\n```\n" + "\n".join(m_lines) + "\n```\n\n**Top Concepts**\n```\n" + "\n".join(c_lines) + "\n```"
 
 
 def lookup_paper(paper_num_str):
-    if not paper_num_str: return "Select a paper number to view details."
+    if not paper_num_str:
+        return "Select a paper number to view details."
     pnum = re.sub(r'[^0-9]', '', str(paper_num_str))
-    if not pnum: return "Enter a valid paper number."
+    if not pnum:
+        return "Enter a valid paper number."
     with driver.session() as session:
         result = session.run("MATCH (p:Paper {number: $num}) OPTIONAL MATCH (p)-[r1:MENTIONS_PROTEIN]->(pr:Protein) OPTIONAL MATCH (p)-[r2:USES_METHOD]->(m:Method) OPTIONAL MATCH (p)-[r3:EXPLORES_CONCEPT]->(c:Concept) OPTIONAL MATCH (p)-[r4:USES_ORGANISM]->(o:Organism) RETURN p.title AS title, p.year AS year, p.journal AS journal, p.authors AS authors, p.key_findings AS findings, collect(DISTINCT pr.name) AS proteins, collect(DISTINCT m.name) AS methods, collect(DISTINCT c.name) AS concepts, collect(DISTINCT o.name) AS organisms", num=pnum)
         record = result.single()
-        if not record: return f"Paper #{pnum} not found in the knowledge base."
+        if not record:
+            return f"Paper #{pnum} not found in the knowledge base."
         title = record['title'] or 'Unknown'
         search_url = f"https://scholar.google.com/scholar?q={'+'.join(title.split()[:10])}"
         return (f"**Paper #{pnum}** ({record['year']})\n\n"
@@ -364,7 +406,7 @@ def lookup_paper(paper_num_str):
                 f"**Journal:** {record['journal'] or 'N/A'}\n\n"
                 f"**Authors:** {record['authors'] or 'N/A'}\n\n"
                 f"**Key Findings:** {record['findings'] or 'N/A'}\n\n"
-                f"**Proteins:** {', '.join(record['proteins']) if record['proteins'] else 'None'}\n\n"
+                f"**Proteins/Genes:** {', '.join(record['proteins']) if record['proteins'] else 'None'}\n\n"
                 f"**Methods:** {', '.join(record['methods']) if record['methods'] else 'None'}\n\n"
                 f"**Concepts:** {', '.join(record['concepts']) if record['concepts'] else 'None'}\n\n"
                 f"**Organisms:** {', '.join(record['organisms']) if record['organisms'] else 'None'}\n\n"
@@ -379,12 +421,14 @@ def chat_fn(message, history):
     global search_history, history_order
     conversation_history = []
     for h in history:
-        if isinstance(h, dict): conversation_history.append(h)
+        if isinstance(h, dict):
+            conversation_history.append(h)
     answer = generate_answer(message, conversation_history)
-    skip = ['hi','hello','hey','thanks','thank you','bye','goodbye','']
+    skip = ['hi', 'hello', 'hey', 'thanks', 'thank you', 'bye', 'goodbye', '']
     if message.strip().lower() not in skip:
         search_history[message] = answer
-        if message in history_order: history_order.remove(message)
+        if message in history_order:
+            history_order.remove(message)
         history_order.insert(0, message)
         history_order[:] = history_order[:20]
     return answer
@@ -444,10 +488,10 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
             gr.HTML("""<div style="padding: 12px;">
                 <div style="color: #4facfe; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px;">Knowledge Graph</div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                    <div style="background: #111d30; border: 1px solid rgba(79,172,254,0.12); border-radius: 10px; padding: 12px; text-align: center;"><div style="font-size: 22px; font-weight: 700; color: #4facfe;">235</div></div><div style="font-size: 9px; color: #5a6d85; text-transform: uppercase;">Papers</div></div>
+                    <div style="background: #111d30; border: 1px solid rgba(79,172,254,0.12); border-radius: 10px; padding: 12px; text-align: center;"><div style="font-size: 22px; font-weight: 700; color: #4facfe;">235</div><div style="font-size: 9px; color: #5a6d85; text-transform: uppercase;">Papers</div></div>
                     <div style="background: #111d30; border: 1px solid rgba(79,172,254,0.12); border-radius: 10px; padding: 12px; text-align: center;"><div style="font-size: 22px; font-weight: 700; color: #4facfe;">738</div><div style="font-size: 9px; color: #5a6d85; text-transform: uppercase;">Proteins</div></div>
                     <div style="background: #111d30; border: 1px solid rgba(79,172,254,0.12); border-radius: 10px; padding: 12px; text-align: center;"><div style="font-size: 22px; font-weight: 700; color: #4facfe;">531</div><div style="font-size: 9px; color: #5a6d85; text-transform: uppercase;">Methods</div></div>
-                    <div style="background: #111d30; border: 1px solid rgba(79,172,254,0.12); border-radius: 10px; padding: 12px; text-align: center;"><div style="font-size: 22px; font-weight: 700; color: #4facfe;">329</div><div style="font-size: 9px; color: #5a6d85; text-transform: uppercase;">Concepts</div></div>
+                    <div style="background: #111d30; border: 1px solid rgba(79,172,254,0.12); border-radius: 10px; padding: 12px; text-align: center;"><div style="font-size: 22px; font-weight: 700; color: #4facfe;">330</div><div style="font-size: 9px; color: #5a6d85; text-transform: uppercase;">Concepts</div></div>
                 </div>
                 <div style="color: #4facfe; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; margin-top: 16px; margin-bottom: 8px;">Recent Searches</div>
             </div>""")
@@ -523,7 +567,8 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
 
     def handle_upload(file):
         preview, entities_json = process_upload(file)
-        if entities_json: return preview, entities_json, gr.update(visible=True)
+        if entities_json:
+            return preview, entities_json, gr.update(visible=True)
         return preview, "", gr.update(visible=False)
 
     upload_btn.click(handle_upload, [upload_file], [upload_preview, upload_entities_state, confirm_btn])
@@ -531,11 +576,12 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
 
     def handle_export(chat_history):
         path = export_chat(chat_history)
-        if path: return gr.update(value=path, visible=True)
+        if path:
+            return gr.update(value=path, visible=True)
         return gr.update(visible=False)
 
     export_btn.click(handle_export, [chatbot], [export_file])
     analytics_btn.click(load_analytics, outputs=[analytics_display])
     paper_lookup_btn.click(lookup_paper, [paper_input], [paper_details])
 
-demo.launch(share=False, server_name="0.0.0.0", server_port=7860)
+demo.launch(server_name="0.0.0.0", server_port=7860)
