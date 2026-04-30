@@ -231,8 +231,8 @@ RULES:
 
 GREETING_WORDS = {'hi','hello','hey','good morning','good afternoon','good evening','howdy','greetings','sup','yo',"what's up",'whats up','hola'}
 
-GREETING_EN = "Hello! I'm the Devreotes Lab Research Assistant — ask me anything about Professor Devreotes' 235 published papers on cell migration, chemotaxis, and signal transduction."
-GREETING_FR = "Bonjour ! Je suis l'assistant de recherche du laboratoire Devreotes — posez-moi n'importe quelle question sur les 235 articles publiés par le professeur Devreotes sur la migration cellulaire, la chimiotaxie et la transduction du signal."
+GREETING_EN = "Hello! I'm the Devreotes Lab Research Assistant — ask me anything about Professor Devreotes' 238 published papers on cell migration, chemotaxis, and signal transduction."
+GREETING_FR = "Bonjour ! Je suis l'assistant de recherche du laboratoire Devreotes — posez-moi n'importe quelle question sur les 238 articles publiés par le professeur Devreotes sur la migration cellulaire, la chimiotaxie et la transduction du signal."
 NOT_AVAILABLE_FR = "Cette information n'est pas disponible dans la base de connaissances du laboratoire Devreotes."
 
 
@@ -250,8 +250,8 @@ def generate_answer(question, conversation_history=None, lang="en"):
     off_topic_triggers = ['how are you','who are you','what are you','your name','what can you do','help me','comment allez','qui êtes','aide']
     if any(trigger in question_stripped for trigger in off_topic_triggers):
         if lang == "fr":
-            return "Je suis l'assistant de recherche du laboratoire Devreotes. Je peux répondre à vos questions sur les protéines, gènes, méthodes, concepts et organismes issus de 235 articles de recherche (1975-2025)."
-        return "I'm the Devreotes Lab Research Assistant. I can answer questions about proteins, genes, methods, concepts, and organisms from 235 research papers spanning 1975 to 2025."
+            return "Je suis l'assistant de recherche du laboratoire Devreotes. Je peux répondre à vos questions sur les protéines, gènes, méthodes, concepts et organismes issus de 238 articles de recherche (1975-2025)."
+        return "I'm the Devreotes Lab Research Assistant. I can answer questions about proteins, genes, methods, concepts, and organisms from 238 research papers spanning 1975 to 2025."
 
     if any(w in question_stripped for w in ['thank', 'merci']):
         return "De rien ! N'hésitez pas à poser d'autres questions." if lang == "fr" else "You're welcome! Feel free to ask more."
@@ -539,7 +539,7 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
                 <div style="font-size: 22px; font-weight: 700; color: #e8f0fe; letter-spacing: -0.5px; font-family: 'Georgia', serif;">
                     Devreotes Lab Research Assistant</div>
                 <div style="font-size: 12px; color: #4facfe; font-weight: 500; letter-spacing: 1px; margin-top: 2px; text-transform: uppercase;">
-                    GraphRAG &middot; 235 Papers &middot; Johns Hopkins University School of Medicine</div>
+                    GraphRAG &middot; 238 Papers &middot; Johns Hopkins University School of Medicine</div>
                 <div style="font-size: 10px; color: #5a7a9a; margin-top: 4px;">
                     🌐 English &amp; Fran&ccedil;ais &middot; 🎤 Voice Input Supported</div>
             </div>
@@ -552,7 +552,7 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
             gr.HTML("""<div style="padding: 12px;">
                 <div style="color: #4facfe; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px;">Knowledge Graph</div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                    <div style="background: #111d30; border: 1px solid rgba(79,172,254,0.12); border-radius: 10px; padding: 12px; text-align: center;"><div style="font-size: 22px; font-weight: 700; color: #4facfe;">235</div><div style="font-size: 9px; color: #5a6d85; text-transform: uppercase;">Papers</div></div>
+                    <div style="background: #111d30; border: 1px solid rgba(79,172,254,0.12); border-radius: 10px; padding: 12px; text-align: center;"><div style="font-size: 22px; font-weight: 700; color: #4facfe;">238</div><div style="font-size: 9px; color: #5a6d85; text-transform: uppercase;">Papers</div></div>
                     <div style="background: #111d30; border: 1px solid rgba(79,172,254,0.12); border-radius: 10px; padding: 12px; text-align: center;"><div style="font-size: 22px; font-weight: 700; color: #4facfe;">738</div><div style="font-size: 9px; color: #5a6d85; text-transform: uppercase;">Proteins</div></div>
                     <div style="background: #111d30; border: 1px solid rgba(79,172,254,0.12); border-radius: 10px; padding: 12px; text-align: center;"><div style="font-size: 22px; font-weight: 700; color: #4facfe;">531</div><div style="font-size: 9px; color: #5a6d85; text-transform: uppercase;">Methods</div></div>
                     <div style="background: #111d30; border: 1px solid rgba(79,172,254,0.12); border-radius: 10px; padding: 12px; text-align: center;"><div style="font-size: 22px; font-weight: 700; color: #4facfe;">330</div><div style="font-size: 9px; color: #5a6d85; text-transform: uppercase;">Concepts</div></div>
