@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import tempfile
 import fitz
 import gradio as gr
 from openai import OpenAI
@@ -17,17 +18,58 @@ client = OpenAI()
 driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
 
 
+# ============================================================
+# VOICE TRANSCRIPTION (Whisper)
+# ============================================================
+def transcribe_audio(audio_path):
+    """Transcribe audio file using OpenAI Whisper API. Returns (text, language)."""
+    if not audio_path:
+        return "", "en"
+    try:
+        with open(audio_path, "rb") as audio_file:
+            response = client.audio.transcriptions.create(
+                model="whisper-1",
+                file=audio_file,
+                response_format="verbose_json"
+            )
+        text = response.text.strip()
+        language = getattr(response, 'language', 'en') or 'en'
+        return text, language
+    except Exception as e:
+        return f"[Voice transcription failed: {str(e)}]", "en"
+
+
+# ============================================================
+# LANGUAGE DETECTION
+# ============================================================
+def detect_language(text):
+    """Detect if text is French or English."""
+    french_words = {'le','la','les','de','du','des','un','une','et','est','en','que',
+                    'qui','dans','pour','sur','avec','ce','cette','sont','par','au',
+                    'aux','ou','mais','pas','ne','ont','fait','plus','quels','quelle',
+                    'quelles','quel','comment','quoi','pourquoi','merci','bonjour',
+                    'salut','papiers','protéines','méthodes','recherche','cellulaire',
+                    'migration','résultats','connexion','entre'}
+    words = text.lower().split()
+    french_count = sum(1 for w in words if w in french_words)
+    return "fr" if french_count >= 2 or any(w in text.lower() for w in ['bonjour','salut','merci','s\'il vous']) else "en"
+
+
+FRENCH_GREETINGS = {'bonjour','salut','bonsoir','coucou','hello','bonne journée'}
+
+
 def correct_spelling(question):
     try:
-        response = client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "system", "content": "You are a spelling corrector for biology research questions. Fix any spelling errors and return ONLY the corrected question. If there are no errors, return the question unchanged."}, {"role": "user", "content": question}], temperature=0, max_tokens=150)
+        response = client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "system", "content": "You are a spelling corrector for biology research questions in English or French. Fix any spelling errors and return ONLY the corrected question. If there are no errors, return the question unchanged."}, {"role": "user", "content": question}], temperature=0, max_tokens=150)
         return response.choices[0].message.content.strip()
     except:
         return question
 
 
 def extract_keywords(question):
-    stop_words = {'what','which','where','when','how','does','about','tell','show','find','papers','paper','that','this','with','from','have','been','their','they','there','were','using','used','use','the','and','for','are','can','you','me','is','it','in','of','to','do','a','an','on','by','has','was','be','or','at','its','who','did','will','would','could','should','between','through','role','most','many','some','any','all','more','than','these','those','into','also','but','not','only','such','other','each','every','much','study','studies','research','describe','explain','discuss','related','involved','connection','connected','relationship','know','known','like','make','makes','give','list','name','please','want','need','think','things','compare','comparison','tell','show','mentioned','mention'}
-    words = re.findall(r'[a-zA-Z0-9/()-]+', question)
+    stop_words = {'what','which','where','when','how','does','about','tell','show','find','papers','paper','that','this','with','from','have','been','their','they','there','were','using','used','use','the','and','for','are','can','you','me','is','it','in','of','to','do','a','an','on','by','has','was','be','or','at','its','who','did','will','would','could','should','between','through','role','most','many','some','any','all','more','than','these','those','into','also','but','not','only','such','other','each','every','much','study','studies','research','describe','explain','discuss','related','involved','connection','connected','relationship','know','known','like','make','makes','give','list','name','please','want','need','think','things','compare','comparison','tell','show','mentioned','mention',
+                  'le','la','les','de','du','des','un','une','et','est','en','que','qui','dans','pour','sur','avec','ce','cette','sont','par','au','aux','ou','mais','pas','ne','ont','fait','plus','quels','quelle','quelles','quel','comment','quoi','pourquoi'}
+    words = re.findall(r'[a-zA-Z0-9/()-éèêëàâùûîïôç]+', question)
     return [w for w in words if w.lower() not in stop_words and len(w) > 2]
 
 
@@ -40,6 +82,10 @@ def query_graph(question):
         paper_numbers = re.findall(r'#(\d{1,3})\b', question)
         if not paper_numbers:
             paper_numbers = re.findall(r'paper\s+(\d{1,3})\b', question_lower)
+            if not paper_numbers:
+                paper_numbers = re.findall(r'papier\s+(\d{1,3})\b', question_lower)
+                if not paper_numbers:
+                    paper_numbers = re.findall(r'article\s+(\d{1,3})\b', question_lower)
         if paper_numbers:
             for pnum in paper_numbers[:10]:
                 result = session.run("MATCH (p:Paper {number: $num}) OPTIONAL MATCH (p)-[r1:MENTIONS_PROTEIN]->(pr:Protein) OPTIONAL MATCH (p)-[r2:USES_METHOD]->(m:Method) OPTIONAL MATCH (p)-[r3:EXPLORES_CONCEPT]->(c:Concept) OPTIONAL MATCH (p)-[r4:USES_ORGANISM]->(o:Organism) RETURN p.number AS paper_num, p.title AS title, p.year AS year, p.key_findings AS findings, p.journal AS journal, p.authors AS authors, collect(DISTINCT pr.name) AS proteins, collect(DISTINCT m.name) AS methods, collect(DISTINCT c.name) AS concepts, collect(DISTINCT o.name) AS organisms", num=pnum)
@@ -47,11 +93,11 @@ def query_graph(question):
                     if r['paper_num'] not in seen_papers:
                         context_parts.append(f"PAPER #{r['paper_num']} ({r['year']}): '{r['title']}'\n    Journal: {r['journal']}\n    Authors: {r['authors']}\n    Findings: {r['findings']}\n    Proteins: {r['proteins']}\n    Methods: {r['methods']}\n    Concepts: {r['concepts']}\n    Organisms: {r['organisms']}")
                         seen_papers.add(r['paper_num'])
-        if any(word in question_lower for word in ['latest', 'newest', 'recent', 'most recent']):
+        if any(word in question_lower for word in ['latest', 'newest', 'recent', 'most recent', 'récent', 'dernier', 'dernière', 'plus récent']):
             result = session.run("MATCH (p:Paper) WHERE p.year IS NOT NULL OPTIONAL MATCH (p)-[:MENTIONS_PROTEIN]->(pr:Protein) OPTIONAL MATCH (p)-[:USES_METHOD]->(m:Method) OPTIONAL MATCH (p)-[:EXPLORES_CONCEPT]->(c:Concept) RETURN p.number AS paper_num, p.title AS title, p.year AS year, p.key_findings AS findings, collect(DISTINCT pr.name) AS proteins, collect(DISTINCT m.name) AS methods, collect(DISTINCT c.name) AS concepts ORDER BY p.year DESC LIMIT 5")
             for r in result:
                 context_parts.append(f"  Paper #{r['paper_num']} ({r['year']}): '{r['title']}'\n    Findings: {r['findings']}\n    Proteins: {r['proteins']}\n    Methods: {r['methods']}\n    Concepts: {r['concepts']}")
-        if any(word in question_lower for word in ['oldest', 'earliest', 'first paper']):
+        if any(word in question_lower for word in ['oldest', 'earliest', 'first paper', 'premier', 'ancien', 'plus ancien']):
             result = session.run("MATCH (p:Paper) WHERE p.year IS NOT NULL AND p.year > 0 OPTIONAL MATCH (p)-[:MENTIONS_PROTEIN]->(pr:Protein) OPTIONAL MATCH (p)-[:EXPLORES_CONCEPT]->(c:Concept) RETURN p.number AS paper_num, p.title AS title, p.year AS year, p.key_findings AS findings, collect(DISTINCT pr.name) AS proteins, collect(DISTINCT c.name) AS concepts ORDER BY p.year ASC LIMIT 5")
             for r in result:
                 context_parts.append(f"  Paper #{r['paper_num']} ({r['year']}): '{r['title']}'\n    Findings: {r['findings']}\n    Proteins: {r['proteins']}\n    Concepts: {r['concepts']}")
@@ -77,29 +123,29 @@ def query_graph(question):
                     if r['paper_num'] not in seen_papers:
                         context_parts.append(f"  Paper #{r['paper_num']} ({r['year']}): '{r['title']}' — Concepts: {r['concepts']}")
                         seen_papers.add(r['paper_num'])
-        if any(phrase in question_lower for phrase in ['list all', 'show all', 'all proteins', 'all methods', 'all concepts', 'all organisms', 'all genes', 'top proteins', 'top methods', 'top concepts', 'top genes', 'most studied', 'most used', 'most common', 'most mentioned', 'frequently']):
-            if any(w in question_lower for w in ['protein', 'gene']):
+        if any(phrase in question_lower for phrase in ['list all', 'show all', 'all proteins', 'all methods', 'all concepts', 'all organisms', 'all genes', 'top proteins', 'top methods', 'top concepts', 'top genes', 'most studied', 'most used', 'most common', 'most mentioned', 'frequently', 'toutes les', 'tous les', 'plus étudié']):
+            if any(w in question_lower for w in ['protein', 'gene', 'protéine', 'gène']):
                 result = session.run("MATCH (p:Paper)-[:MENTIONS_PROTEIN]->(pr:Protein) RETURN pr.name AS name, count(p) AS papers ORDER BY papers DESC LIMIT 20")
                 records = list(result)
                 if records:
                     context_parts.append("TOP PROTEINS/GENES BY PAPER COUNT:")
                     for r in records:
                         context_parts.append(f"  {r['name']}: {r['papers']} papers")
-            elif any(w in question_lower for w in ['method', 'technique']):
+            elif any(w in question_lower for w in ['method', 'technique', 'méthode']):
                 result = session.run("MATCH (p:Paper)-[:USES_METHOD]->(m:Method) RETURN m.name AS name, count(p) AS papers ORDER BY papers DESC LIMIT 20")
                 records = list(result)
                 if records:
                     context_parts.append("TOP METHODS:")
                     for r in records:
                         context_parts.append(f"  {r['name']}: {r['papers']} papers")
-            elif any(w in question_lower for w in ['concept', 'topic', 'theme']):
+            elif any(w in question_lower for w in ['concept', 'topic', 'theme', 'sujet']):
                 result = session.run("MATCH (p:Paper)-[:EXPLORES_CONCEPT]->(c:Concept) RETURN c.name AS name, count(p) AS papers ORDER BY papers DESC LIMIT 20")
                 records = list(result)
                 if records:
                     context_parts.append("TOP CONCEPTS:")
                     for r in records:
                         context_parts.append(f"  {r['name']}: {r['papers']} papers")
-            elif any(w in question_lower for w in ['organism', 'species', 'model']):
+            elif any(w in question_lower for w in ['organism', 'species', 'model', 'organisme', 'espèce']):
                 result = session.run("MATCH (p:Paper)-[:USES_ORGANISM]->(o:Organism) RETURN o.name AS name, count(p) AS papers ORDER BY papers DESC LIMIT 20")
                 records = list(result)
                 if records:
@@ -114,7 +160,7 @@ def query_graph(question):
                         context_parts.append(f"TOP {label}:")
                         for r in records:
                             context_parts.append(f"  {r['name']}: {r['papers']} papers")
-        if any(phrase in question_lower for phrase in ['connected to', 'connection between', 'related to', 'relationship between', 'link between']):
+        if any(phrase in question_lower for phrase in ['connected to', 'connection between', 'related to', 'relationship between', 'link between', 'lien entre', 'connexion entre', 'relié à', 'rapport entre']):
             if len(keywords) >= 2:
                 kw1, kw2 = keywords[0].lower(), keywords[1].lower()
                 result = session.run("MATCH (p:Paper)-[]->(e1) WHERE toLower(e1.name) CONTAINS $k1 WITH p MATCH (p)-[]->(e2) WHERE toLower(e2.name) CONTAINS $k2 OPTIONAL MATCH (p)-[:MENTIONS_PROTEIN]->(pr:Protein) OPTIONAL MATCH (p)-[:EXPLORES_CONCEPT]->(c:Concept) RETURN p.number AS paper_num, p.title AS title, p.year AS year, p.key_findings AS findings, collect(DISTINCT pr.name) AS proteins, collect(DISTINCT c.name) AS concepts LIMIT 10", k1=kw1, k2=kw2)
@@ -155,7 +201,7 @@ def query_graph(question):
                     for r in new_records:
                         context_parts.append(f"  Paper #{r['paper_num']} ({r['year']}): '{r['title']}'\n    Findings: {r['findings']}\n    Proteins: {r['proteins']}\n    Methods: {r['methods']}")
                         seen_papers.add(r['paper_num'])
-        if any(word in question_lower for word in ['how many', 'total', 'overview', 'statistics', 'stat']):
+        if any(word in question_lower for word in ['how many', 'total', 'overview', 'statistics', 'stat', 'combien', 'statistiques', 'aperçu']):
             counts = {}
             for label in ['Paper', 'Protein', 'Gene', 'Method', 'Concept', 'Organism']:
                 result = session.run(f"MATCH (n:{label}) RETURN count(n) AS count")
@@ -168,11 +214,14 @@ def query_graph(question):
 
 SYSTEM_PROMPT = """You are the Devreotes Lab Research Assistant, a specialized AI for Professor Peter Devreotes' lab at Johns Hopkins University School of Medicine.
 The knowledge graph contains 235 papers (1975-2025), 738 proteins/genes, 531 methods, 330 concepts, and 228 organisms connected by thousands of relationships.
+
+CRITICAL LANGUAGE RULE: Always respond in the SAME LANGUAGE as the user's question. If the user asks in French, respond entirely in French. If the user asks in English, respond in English.
+
 RULES:
 1. Answer in your own words from the provided graph context. Synthesize naturally.
 2. Keep responses concise - 2-4 sentences for simple questions, more only when necessary.
-3. Always cite paper numbers (e.g., "Paper #276").
-4. If the information is not in the graph context or conversation history, say: "This information is not available in the Devreotes Lab knowledge base."
+3. Always cite paper numbers (e.g., "Paper #276" or "Article #276" in French).
+4. If the information is not in the graph context or conversation history, say: "This information is not available in the Devreotes Lab knowledge base." (or the French equivalent if asked in French).
 5. ALWAYS cite specific papers from the graph context. Never give generic textbook definitions without paper citations.
 6. NEVER suggest topics or information outside the knowledge base.
 7. When listing papers, keep descriptions brief.
@@ -182,51 +231,72 @@ RULES:
 
 GREETING_WORDS = {'hi','hello','hey','good morning','good afternoon','good evening','howdy','greetings','sup','yo',"what's up",'whats up','hola'}
 
+GREETING_EN = "Hello! I'm the Devreotes Lab Research Assistant — ask me anything about Professor Devreotes' 235 published papers on cell migration, chemotaxis, and signal transduction."
+GREETING_FR = "Bonjour ! Je suis l'assistant de recherche du laboratoire Devreotes — posez-moi n'importe quelle question sur les 235 articles publiés par le professeur Devreotes sur la migration cellulaire, la chimiotaxie et la transduction du signal."
+NOT_AVAILABLE_FR = "Cette information n'est pas disponible dans la base de connaissances du laboratoire Devreotes."
 
-def generate_answer(question, conversation_history=None):
+
+def generate_answer(question, conversation_history=None, lang="en"):
     if not question or not question.strip():
-        return "Please type a question to get started."
+        return "Please type a question to get started." if lang == "en" else "Veuillez taper une question pour commencer."
     question_stripped = question.strip().lower().rstrip('!?.,:;')
+
+    # Greetings
     if question_stripped in GREETING_WORDS or any(question_stripped.startswith(g) for g in GREETING_WORDS):
-        return "Hello! I'm the Devreotes Lab Research Assistant — ask me anything about Professor Devreotes' 235 published papers on cell migration, chemotaxis, and signal transduction."
-    off_topic_triggers = ['how are you','who are you','what are you','your name','what can you do','help me']
+        return GREETING_EN
+    if question_stripped in FRENCH_GREETINGS or any(question_stripped.startswith(g) for g in FRENCH_GREETINGS):
+        return GREETING_FR
+
+    off_topic_triggers = ['how are you','who are you','what are you','your name','what can you do','help me','comment allez','qui êtes','aide']
     if any(trigger in question_stripped for trigger in off_topic_triggers):
+        if lang == "fr":
+            return "Je suis l'assistant de recherche du laboratoire Devreotes. Je peux répondre à vos questions sur les protéines, gènes, méthodes, concepts et organismes issus de 235 articles de recherche (1975-2025)."
         return "I'm the Devreotes Lab Research Assistant. I can answer questions about proteins, genes, methods, concepts, and organisms from 235 research papers spanning 1975 to 2025."
-    if 'thank' in question_stripped:
-        return "You're welcome! Feel free to ask more."
-    if 'bye' in question_stripped or 'goodbye' in question_stripped:
-        return "Goodbye! Come back anytime."
+
+    if any(w in question_stripped for w in ['thank', 'merci']):
+        return "De rien ! N'hésitez pas à poser d'autres questions." if lang == "fr" else "You're welcome! Feel free to ask more."
+    if any(w in question_stripped for w in ['bye', 'goodbye', 'au revoir', 'à bientôt']):
+        return "Au revoir ! Revenez quand vous voulez." if lang == "fr" else "Goodbye! Come back anytime."
+
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     if conversation_history:
         for turn in conversation_history[-8:]:
             messages.append(turn)
+
     is_conversational = False
     if conversation_history:
-        ref_words = ['this','these','those','them','they','it','that','above','previous','mentioned','you said','you mentioned','the same','where do i find','where is','where are','where can','when was','when were','who wrote','which year','how many of','more about','tell me more','elaborate','go on','continue','what else','which ones','specifically','in detail','expand on']
-        summary_words = ['summarize','summary','in short','briefly','define this','in a summary','short version','simplify','simpler terms','in a nutshell','quick summary','shorter']
+        ref_words = ['this','these','those','them','they','it','that','above','previous','mentioned','you said','you mentioned','the same','where do i find','where is','where are','where can','when was','when were','who wrote','which year','how many of','more about','tell me more','elaborate','go on','continue','what else','which ones','specifically','in detail','expand on','ceci','cela','ces','eux','ils','elle','ci-dessus','précédent','mentionné','plus de détails','expliquer','continuer']
+        summary_words = ['summarize','summary','in short','briefly','define this','in a summary','short version','simplify','simpler terms','in a nutshell','quick summary','shorter','résumer','résumé','brièvement','en bref']
         if any(word in question_stripped for word in summary_words):
             is_conversational = True
         elif len(question.split()) <= 8 and any(word in question_stripped for word in ref_words):
             is_conversational = True
+
     if is_conversational:
         messages.append({"role": "user", "content": question})
         response = client.chat.completions.create(model="gpt-4o-mini", messages=messages, temperature=0.3, max_tokens=800)
         return response.choices[0].message.content
+
     corrected = correct_spelling(question) if len(question.split()) > 4 else question
     graph_context = query_graph(corrected)
+
     if graph_context == "NO_RESULTS":
         if conversation_history:
             messages.append({"role": "user", "content": question})
             response = client.chat.completions.create(model="gpt-4o-mini", messages=messages, temperature=0.3, max_tokens=800)
             answer = response.choices[0].message.content
-            if "not available" not in answer.lower() and "don't have" not in answer.lower():
+            if "not available" not in answer.lower() and "don't have" not in answer.lower() and "pas disponible" not in answer.lower():
                 return answer
-        return "This information is not available in the Devreotes Lab knowledge base."
+        return NOT_AVAILABLE_FR if lang == "fr" else "This information is not available in the Devreotes Lab knowledge base."
+
     messages.append({"role": "user", "content": f"Based on the following knowledge graph data, answer the question.\n\nGRAPH CONTEXT:\n{graph_context}\n\nQUESTION: {question}"})
     response = client.chat.completions.create(model="gpt-4o-mini", messages=messages, temperature=0.3, max_tokens=800)
     return response.choices[0].message.content
 
 
+# ============================================================
+# PAPER UPLOAD
+# ============================================================
 EXTRACTION_PROMPT = """You are a biomedical research paper analyst for the Devreotes Lab at Johns Hopkins University.
 Extract entities from this paper as JSON:
 {"title":"Full paper title","authors":["Author 1"],"year":2025,"journal":"Journal name","proteins":[{"name":"Protein name","context":"Role (1 sentence)"}],"methods":[{"name":"Method name","context":"How used (1 sentence)"}],"concepts":[{"name":"Concept name","context":"Relation (1 sentence)"}],"model_organisms":[{"name":"Organism","context":"Why used (1 sentence)"}],"key_findings":"2-3 sentence summary","is_cell_biology":true}
@@ -401,16 +471,7 @@ def lookup_paper(paper_num_str):
             return f"Paper #{pnum} not found in the knowledge base."
         title = record['title'] or 'Unknown'
         search_url = f"https://scholar.google.com/scholar?q={'+'.join(title.split()[:10])}"
-        return (f"**Paper #{pnum}** ({record['year']})\n\n"
-                f"**Title:** {title}\n\n"
-                f"**Journal:** {record['journal'] or 'N/A'}\n\n"
-                f"**Authors:** {record['authors'] or 'N/A'}\n\n"
-                f"**Key Findings:** {record['findings'] or 'N/A'}\n\n"
-                f"**Proteins/Genes:** {', '.join(record['proteins']) if record['proteins'] else 'None'}\n\n"
-                f"**Methods:** {', '.join(record['methods']) if record['methods'] else 'None'}\n\n"
-                f"**Concepts:** {', '.join(record['concepts']) if record['concepts'] else 'None'}\n\n"
-                f"**Organisms:** {', '.join(record['organisms']) if record['organisms'] else 'None'}\n\n"
-                f"[🔗 Find on Google Scholar]({search_url})")
+        return (f"**Paper #{pnum}** ({record['year']})\n\n**Title:** {title}\n\n**Journal:** {record['journal'] or 'N/A'}\n\n**Authors:** {record['authors'] or 'N/A'}\n\n**Key Findings:** {record['findings'] or 'N/A'}\n\n**Proteins/Genes:** {', '.join(record['proteins']) if record['proteins'] else 'None'}\n\n**Methods:** {', '.join(record['methods']) if record['methods'] else 'None'}\n\n**Concepts:** {', '.join(record['concepts']) if record['concepts'] else 'None'}\n\n**Organisms:** {', '.join(record['organisms']) if record['organisms'] else 'None'}\n\n[🔗 Find on Google Scholar]({search_url})")
 
 
 search_history = {}
@@ -423,8 +484,9 @@ def chat_fn(message, history):
     for h in history:
         if isinstance(h, dict):
             conversation_history.append(h)
-    answer = generate_answer(message, conversation_history)
-    skip = ['hi', 'hello', 'hey', 'thanks', 'thank you', 'bye', 'goodbye', '']
+    lang = detect_language(message)
+    answer = generate_answer(message, conversation_history, lang)
+    skip = ['hi', 'hello', 'hey', 'thanks', 'thank you', 'bye', 'goodbye', 'bonjour', 'salut', 'merci', 'au revoir', '']
     if message.strip().lower() not in skip:
         search_history[message] = answer
         if message in history_order:
@@ -478,6 +540,8 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
                     Devreotes Lab Research Assistant</div>
                 <div style="font-size: 12px; color: #4facfe; font-weight: 500; letter-spacing: 1px; margin-top: 2px; text-transform: uppercase;">
                     GraphRAG &middot; 235 Papers &middot; Johns Hopkins University School of Medicine</div>
+                <div style="font-size: 10px; color: #5a7a9a; margin-top: 4px;">
+                    🌐 English &amp; Fran&ccedil;ais &middot; 🎤 Voice Input Supported</div>
             </div>
         </div>
     """)
@@ -502,12 +566,14 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
 
         # CENTER CHAT
         with gr.Column(scale=3):
-            chatbot = gr.Chatbot(height=520, show_label=False)
+            chatbot = gr.Chatbot(height=480, show_label=False)
             with gr.Row():
-                msg = gr.Textbox(placeholder="Ask about the Devreotes Lab research...", show_label=False, scale=5)
+                msg = gr.Textbox(placeholder="Type or use voice 🎤 (English / Français)...", show_label=False, scale=4)
+                voice_input = gr.Audio(sources=["microphone"], type="filepath", label="🎤", scale=1)
                 send_btn = gr.Button("Send", scale=1, variant="primary")
-                export_btn = gr.Button("📥 Export", scale=1, variant="secondary")
-                add_paper_btn = gr.Button("📤 Add Paper", scale=1, variant="secondary")
+            with gr.Row():
+                export_btn = gr.Button("📥 Export", size="sm", variant="secondary")
+                add_paper_btn = gr.Button("📤 Add Paper", size="sm", variant="secondary")
             export_file = gr.File(label="Download Chat", visible=False)
             with gr.Group(visible=False) as upload_section:
                 gr.HTML('<div style="color: #4facfe; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">Upload New Paper</div>')
@@ -537,19 +603,35 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
             s1 = gr.Button("How does Ras regulate cell migration?", size="sm")
             s2 = gr.Button("Which papers use optogenetics?", size="sm")
             s3 = gr.Button("What is the role of PTEN in chemotaxis?", size="sm")
-            s4 = gr.Button("Tell me about the Warburg effect", size="sm")
+            s4 = gr.Button("Quel est le rôle de la chimiotaxie?", size="sm")
             s5 = gr.Button("What methods study cell polarity?", size="sm")
             s6 = gr.Button("Papers from the 2020s", size="sm")
 
     # EVENT HANDLERS
     def respond(message, chat_history):
+        if not message or not message.strip():
+            return "", chat_history, gr.update(choices=get_visible_history(), value=None)
         bot_response = chat_fn(message, chat_history)
         chat_history.append({"role": "user", "content": message})
         chat_history.append({"role": "assistant", "content": bot_response})
         return "", chat_history, gr.update(choices=get_visible_history(), value=None)
 
+    def respond_voice(audio_path, chat_history):
+        if not audio_path:
+            return "", chat_history, gr.update(choices=get_visible_history(), value=None), None
+        text, lang = transcribe_audio(audio_path)
+        if not text or text.startswith("[Voice"):
+            chat_history.append({"role": "user", "content": "🎤 (voice input)"})
+            chat_history.append({"role": "assistant", "content": "Sorry, I couldn't understand the audio. Please try again or type your question."})
+            return "", chat_history, gr.update(choices=get_visible_history(), value=None), None
+        bot_response = chat_fn(text, chat_history)
+        chat_history.append({"role": "user", "content": f"🎤 {text}"})
+        chat_history.append({"role": "assistant", "content": bot_response})
+        return "", chat_history, gr.update(choices=get_visible_history(), value=None), None
+
     msg.submit(respond, [msg, chatbot], [msg, chatbot, history_dropdown])
     send_btn.click(respond, [msg, chatbot], [msg, chatbot, history_dropdown])
+    voice_input.stop_recording(respond_voice, [voice_input, chatbot], [msg, chatbot, history_dropdown, voice_input])
 
     for btn in [s1, s2, s3, s4, s5, s6]:
         btn.click(fn=lambda suggestion, h: ("", h + [{"role": "user", "content": suggestion}, {"role": "assistant", "content": chat_fn(suggestion, h)}], gr.update(choices=get_visible_history(), value=None)), inputs=[btn, chatbot], outputs=[msg, chatbot, history_dropdown])
