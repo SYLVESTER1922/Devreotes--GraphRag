@@ -213,7 +213,7 @@ def query_graph(question):
 
 
 SYSTEM_PROMPT = """You are the Devreotes Lab Research Assistant, a specialized AI for Professor Peter Devreotes' lab at Johns Hopkins University School of Medicine.
-The knowledge graph contains 235 papers (1975-2025), 738 proteins/genes, 531 methods, 330 concepts, and 228 organisms connected by thousands of relationships.
+The knowledge graph contains 239 papers (1975-2025), 738 proteins/genes, 531 methods, 330 concepts, and 228 organisms connected by thousands of relationships.
 
 CRITICAL LANGUAGE RULE: Always respond in the SAME LANGUAGE as the user's question. If the user asks in French, respond entirely in French. If the user asks in English, respond in English.
 
@@ -231,8 +231,8 @@ RULES:
 
 GREETING_WORDS = {'hi','hello','hey','good morning','good afternoon','good evening','howdy','greetings','sup','yo',"what's up",'whats up','hola'}
 
-GREETING_EN = "Hello! I'm the Devreotes Lab Research Assistant — ask me anything about Professor Devreotes' 238 published papers on cell migration, chemotaxis, and signal transduction."
-GREETING_FR = "Bonjour ! Je suis l'assistant de recherche du laboratoire Devreotes — posez-moi n'importe quelle question sur les 238 articles publiés par le professeur Devreotes sur la migration cellulaire, la chimiotaxie et la transduction du signal."
+GREETING_EN = "Hello! I'm the Devreotes Lab Research Assistant — ask me anything about Professor Devreotes' 239 published papers on cell migration, chemotaxis, and signal transduction."
+GREETING_FR = "Bonjour ! Je suis l'assistant de recherche du laboratoire Devreotes — posez-moi n'importe quelle question sur les 239 articles publiés par le professeur Devreotes sur la migration cellulaire, la chimiotaxie et la transduction du signal."
 NOT_AVAILABLE_FR = "Cette information n'est pas disponible dans la base de connaissances du laboratoire Devreotes."
 
 
@@ -251,7 +251,7 @@ def generate_answer(question, conversation_history=None, lang="en"):
     if any(trigger in question_stripped for trigger in off_topic_triggers):
         if lang == "fr":
             return "Je suis l'assistant de recherche du laboratoire Devreotes. Je peux répondre à vos questions sur les protéines, gènes, méthodes, concepts et organismes issus de 238 articles de recherche (1975-2025)."
-        return "I'm the Devreotes Lab Research Assistant. I can answer questions about proteins, genes, methods, concepts, and organisms from 238 research papers spanning 1975 to 2025."
+        return "I'm the Devreotes Lab Research Assistant. I can answer questions about proteins, genes, methods, concepts, and organisms from 239 research papers spanning 1975 to 2025."
 
     if any(w in question_stripped for w in ['thank', 'merci']):
         return "De rien ! N'hésitez pas à poser d'autres questions." if lang == "fr" else "You're welcome! Feel free to ask more."
@@ -539,7 +539,7 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
                 <div style="font-size: 22px; font-weight: 700; color: #e8f0fe; letter-spacing: -0.5px; font-family: 'Georgia', serif;">
                     Devreotes Lab Research Assistant</div>
                 <div style="font-size: 12px; color: #4facfe; font-weight: 500; letter-spacing: 1px; margin-top: 2px; text-transform: uppercase;">
-                    GraphRAG &middot; 238 Papers &middot; Johns Hopkins University School of Medicine</div>
+                    GraphRAG &middot; 239 Papers &middot; Johns Hopkins University School of Medicine</div>
                 <div style="font-size: 10px; color: #5a7a9a; margin-top: 4px;">
                     🌐 English &amp; Fran&ccedil;ais &middot; 🎤 Voice Input Supported</div>
             </div>
