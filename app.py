@@ -349,13 +349,14 @@ with gr.Blocks(title="Devreotes Lab Research Assistant", css=CUSTOM_CSS) as demo
                 <div style="color: #c9a84c; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; margin-top: 20px; margin-bottom: 8px;">Recent Searches</div>
             </div>""")
             history_dropdown=gr.Dropdown(choices=[],label="Click to replay",interactive=True,allow_custom_value=False)
-            gr.HTML('<div style="padding:0 12px;"><div style="color:#c9a84c;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin-top:18px;margin-bottom:8px;">📊 Analytics</div></div>')
-            analytics_btn=gr.Button("Load Analytics",size="sm",variant="secondary")
-            analytics_display=gr.Markdown("")
             gr.HTML('<div style="padding:0 12px;"><div style="color:#c9a84c;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin-top:18px;margin-bottom:8px;">🛠 Tools</div></div>')
             export_btn=gr.Button("📥 Export Chat",size="sm",variant="secondary")
             export_file=gr.File(label="Download",visible=False)
             add_paper_btn=gr.Button("📤 Add Paper",size="sm",variant="secondary")
+            gr.HTML('<div style="padding:0 12px;"><div style="color:#c9a84c;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin-top:18px;margin-bottom:8px;">📊 Analytics</div></div>')
+            analytics_btn=gr.Button("Load Analytics",size="sm",variant="secondary")
+            analytics_display=gr.Markdown("")
+        
             with gr.Group(visible=False) as upload_section:
                 upload_file=gr.File(label="Select PDF",file_types=[".pdf"])
                 upload_btn=gr.Button("🔍 Analyze",size="sm",variant="secondary")
@@ -377,10 +378,9 @@ with gr.Blocks(title="Devreotes Lab Research Assistant", css=CUSTOM_CSS) as demo
                 lang_toggle=gr.Radio(choices=["English","Français"],value="English",label="🌐",scale=2)
             # Dynamic follow-up suggestions
             gr.HTML('<div style="color:#c9a84c;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin-top:8px;margin-bottom:6px;">💡 Suggested Follow-ups</div>')
-            with gr.Row():
-                fup1=gr.Button("How does Ras regulate cell migration?",size="sm",visible=True)
-                fup2=gr.Button("What is the most studied protein?",size="sm",visible=True)
-                fup3=gr.Button("Which papers use optogenetics?",size="sm",visible=True)
+            fup1=gr.Button("How does Ras regulate cell migration?",size="sm",visible=True)
+            fup2=gr.Button("What is the most studied protein?",size="sm",visible=True)
+            fup3=gr.Button("Which papers use optogenetics?",size="sm",visible=True)
 
         # RIGHT SIDEBAR
         with gr.Column(scale=1, min_width=220):
