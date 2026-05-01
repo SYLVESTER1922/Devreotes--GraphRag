@@ -113,10 +113,24 @@ def parse_followups(answer):
     lines=answer.split('\n'); main=[]; fups=[]
     for line in lines:
         stripped=line.strip()
+        if not stripped:
+            main.append(line)
+            continue
         if stripped.startswith('FOLLOWUP:'):
-            fups.append(stripped.replace('FOLLOWUP:','').strip())
+            fup=stripped.replace('FOLLOWUP:','').strip()
+            if fup: fups.append(fup)
         elif stripped.startswith('💡'):
-            fups.append(stripped.replace('💡','').strip())
+            fup=stripped.replace('💡','').strip()
+            if fup: fups.append(fup)
+        elif stripped.startswith('- 💡'):
+            fup=stripped.replace('- 💡','').strip()
+            if fup: fups.append(fup)
+        elif stripped.startswith('*💡'):
+            fup=stripped.replace('*💡','').strip().rstrip('*')
+            if fup: fups.append(fup)
+        elif len(fups) > 0 and len(fups) < 3 and stripped.startswith(('- ','* ','1.','2.','3.')):
+            fup=re.sub(r'^[-*\d.]+\s*', '', stripped).strip()
+            if fup and len(fup) > 10: fups.append(fup)
         else:
             main.append(line)
     clean='\n'.join(main).strip()
