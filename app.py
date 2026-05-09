@@ -404,7 +404,10 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
         * { color: #ffffff !important; }
         button { color: #c9a84c !important; }
         button.primary { color: #0c1a2e !important; }
-        input, textarea { color: #ffffff !important; }     
+        input, textarea { color: #ffffff !important; }
+        /* Radio buttons force white */
+        input[type="radio"] + label, .wrap label, [data-testid="radio"] label, [role="radio"] span, [role="radiogroup"] label { color: #ffffff !important; }
+        .gradio-radio *, [data-testid="radio"] * { color: #ffffff !important; }
         /* Hide footer */
         footer { display: none !important; }
     </style>
