@@ -98,14 +98,14 @@ def query_graph(question):
 
 def get_sys_prompt(lang):
     b="""You are the Devreotes Lab Research Assistant for Prof. Peter Devreotes' lab at Johns Hopkins University School of Medicine.
-Knowledge graph: 239 papers (1975-2025), 738 proteins/genes, 531 methods, 330 concepts, 228 organisms.
+The knowledge graph contains research papers (1975-2025), proteins/genes, methods, concepts, and organisms.
 RULES: 1.Answer from graph context only. 2.Concise:2-4 sentences. 3.Cite paper numbers. 4.Say not available if missing. 5.Always cite papers. 6.No outside knowledge. 7.Brief descriptions. 8.Highlight connections. 9.Use history for follow-ups. 10.Summarize when asked.
 11.IMPORTANT: End every answer with exactly 3 follow-up suggestions. Format each on its own line starting with "FOLLOWUP:" (this prefix will be hidden from the user). Make them brief, specific, and relevant."""
     if lang=="fr": b+="\n12.RESPOND IN FRENCH. Use 'Article #' not 'Paper #'. Follow-ups in French."
     return b
 
-GREET_EN="Hello! I'm the Devreotes Lab Research Assistant — ask me anything about Professor Devreotes' 239 published papers on cell migration, chemotaxis, and signal transduction."
-GREET_FR="Bonjour ! Je suis l'assistant de recherche du laboratoire Devreotes — posez-moi n'importe quelle question sur les 239 articles publiés."
+GREET_EN="Hello! I'm the Devreotes Lab Research Assistant — ask me anything about Professor Devreotes' published papers on cell migration, chemotaxis, and signal transduction."
+GREET_FR="Bonjour ! Je suis l'assistant de recherche du laboratoire Devreotes — posez-moi n'importe quelle question sur les articles publiés."
 GW_EN={'hi','hello','hey','good morning','good afternoon','good evening','howdy','greetings','sup','yo',"what's up",'whats up'}
 GW_FR={'bonjour','salut','bonsoir','coucou'}
 
@@ -146,8 +146,8 @@ def generate_answer(question, conv_hist=None, lang="en"):
     if q in GW_FR or any(q.startswith(g) for g in GW_FR):
         return GREET_FR, ["Comment Ras régule-t-il la migration cellulaire ?","Quelle est la protéine la plus étudiée ?","Quels articles utilisent l'optogénétique ?"]
     if any(t in q for t in ['how are you','who are you','what are you','your name','what can you do','help me','comment allez','qui êtes','aide']):
-        if lang=="fr": return "Je suis l'assistant du laboratoire Devreotes. Je réponds à vos questions sur 239 articles (1975-2025).", ["Qu'est-ce que PTEN ?","Articles des années 2020 ?","Combien de protéines ?"]
-        return "I'm the Devreotes Lab Research Assistant. I answer questions about 239 papers (1975-2025).", ["What is PTEN?","Papers from the 2020s?","How many proteins?"]
+        if lang=="fr": return "Je suis l'assistant du laboratoire Devreotes. Je réponds à vos questions sur les articles de recherche (1975-2025).", ["Qu'est-ce que PTEN ?","Articles des années 2020 ?","Combien de protéines ?"]
+        return "I'm the Devreotes Lab Research Assistant. I answer questions about research papers spanning 1975 to 2025.", ["What is PTEN?","Papers from the 2020s?","How many proteins?"]
     if any(w in q for w in ['thank','merci']): return ("De rien !" if lang=="fr" else "You're welcome!"), []
     if any(w in q for w in ['bye','goodbye','au revoir']): return ("Au revoir !" if lang=="fr" else "Goodbye!"), []
 
@@ -273,6 +273,17 @@ def lookup_paper(ps):
         ti=r['t'] or '?'; url=f"https://scholar.google.com/scholar?q={'+'.join(ti.split()[:10])}"
         return f"**Paper #{pn}** ({r['y']})\n\n**Title:** {ti}\n**Journal:** {r['j'] or 'N/A'}\n**Authors:** {r['a'] or 'N/A'}\n**Findings:** {r['f'] or 'N/A'}\n**Proteins:** {', '.join(r['pr']) or 'None'}\n**Methods:** {', '.join(r['me']) or 'None'}\n**Concepts:** {', '.join(r['co']) or 'None'}\n**Organisms:** {', '.join(r['og']) or 'None'}\n\n[🔗 Google Scholar]({url})"
 
+# DYNAMIC GRAPH COUNTS
+def get_graph_counts():
+    try:
+        with driver.session() as s:
+            counts = {}
+            for lb in ['Paper','Protein','Method','Concept']:
+                counts[lb] = s.run(f"MATCH (n:{lb}) RETURN count(n) AS c").single()["c"]
+            return counts
+    except:
+        return {'Paper':'—','Protein':'—','Method':'—','Concept':'—'}
+
 search_history={}; history_order=[]; current_lang="en"
 
 def chat_fn(message, history):
@@ -291,15 +302,11 @@ def get_vis_hist(): return history_order[:10]
 # ============================================================
 # UI — Navy + Gold Academic Theme
 # ============================================================
-CUSTOM_CSS = """
-.gradio-container {font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, Georgia, serif !important;}
-"""
-
-with gr.Blocks(title="Devreotes Lab Research Assistant", css=CUSTOM_CSS) as demo:
+with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
     upload_entities_state=gr.State("")
     followup_state=gr.State([])
 
-    # HEADER — Navy + Gold
+    # HEADER
     gr.HTML("""
         <div style="background: linear-gradient(135deg, #0c1a2e 0%, #1a2d4a 30%, #243b5c 60%, #0c1a2e 100%);
                     padding: 28px 36px; border-bottom: 3px solid #c9a84c;
@@ -334,7 +341,7 @@ with gr.Blocks(title="Devreotes Lab Research Assistant", css=CUSTOM_CSS) as demo
                     Devreotes Lab Research Assistant</div>
                 <div style="font-size: 11px; color: #c9a84c; font-weight: 600;
                             letter-spacing: 2px; margin-top: 4px; text-transform: uppercase;">
-                    GraphRAG &middot; 239 Papers &middot; Johns Hopkins University School of Medicine</div>
+                    GraphRAG &middot; Research Papers &middot; Johns Hopkins University School of Medicine</div>
                 <div style="font-size: 10px; color: #8a9bb8; margin-top: 5px; letter-spacing: 0.5px;">
                     🌐 English &amp; Français &middot; 🎤 Voice Input</div>
             </div>
@@ -346,20 +353,9 @@ with gr.Blocks(title="Devreotes Lab Research Assistant", css=CUSTOM_CSS) as demo
         with gr.Column(scale=1, min_width=230):
             gr.HTML("""<div style="padding: 12px;">
                 <div style="color: #c9a84c; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px;">Knowledge Graph</div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                    <div style="background: linear-gradient(135deg, #0f1c30, #162640); border: 1px solid rgba(201,168,76,0.15); border-radius: 10px; padding: 14px; text-align: center;">
-                        <div style="font-size: 24px; font-weight: 700; color: #c9a84c;">239</div>
-                        <div style="font-size: 8px; color: #6a7a8a; text-transform: uppercase; letter-spacing: 1.5px;">Papers</div></div>
-                    <div style="background: linear-gradient(135deg, #0f1c30, #162640); border: 1px solid rgba(201,168,76,0.15); border-radius: 10px; padding: 14px; text-align: center;">
-                        <div style="font-size: 24px; font-weight: 700; color: #c9a84c;">738</div>
-                        <div style="font-size: 8px; color: #6a7a8a; text-transform: uppercase; letter-spacing: 1.5px;">Proteins</div></div>
-                    <div style="background: linear-gradient(135deg, #0f1c30, #162640); border: 1px solid rgba(201,168,76,0.15); border-radius: 10px; padding: 14px; text-align: center;">
-                        <div style="font-size: 24px; font-weight: 700; color: #c9a84c;">531</div>
-                        <div style="font-size: 8px; color: #6a7a8a; text-transform: uppercase; letter-spacing: 1.5px;">Methods</div></div>
-                    <div style="background: linear-gradient(135deg, #0f1c30, #162640); border: 1px solid rgba(201,168,76,0.15); border-radius: 10px; padding: 14px; text-align: center;">
-                        <div style="font-size: 24px; font-weight: 700; color: #c9a84c;">330</div>
-                        <div style="font-size: 8px; color: #6a7a8a; text-transform: uppercase; letter-spacing: 1.5px;">Concepts</div></div>
-                </div>
+            </div>""")
+            stats_display = gr.Markdown("Loading stats...")
+            gr.HTML("""<div style="padding: 0 12px;">
                 <div style="color: #c9a84c; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; margin-top: 20px; margin-bottom: 8px;">Recent Searches</div>
             </div>""")
             history_dropdown=gr.Dropdown(choices=[],label="Click to replay",interactive=True,allow_custom_value=False)
@@ -367,10 +363,6 @@ with gr.Blocks(title="Devreotes Lab Research Assistant", css=CUSTOM_CSS) as demo
             export_btn=gr.Button("📥 Export Chat",size="sm",variant="secondary")
             export_file=gr.File(label="Download",visible=False)
             add_paper_btn=gr.Button("📤 Add Paper",size="sm",variant="secondary")
-            gr.HTML('<div style="padding:0 12px;"><div style="color:#c9a84c;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin-top:18px;margin-bottom:8px;">📊 Analytics</div></div>')
-            analytics_btn=gr.Button("Load Analytics",size="sm",variant="secondary")
-            analytics_display=gr.Markdown("")
-        
             with gr.Group(visible=False) as upload_section:
                 upload_file=gr.File(label="Select PDF",file_types=[".pdf"])
                 upload_btn=gr.Button("🔍 Analyze",size="sm",variant="secondary")
@@ -380,6 +372,9 @@ with gr.Blocks(title="Devreotes Lab Research Assistant", css=CUSTOM_CSS) as demo
                     confirm_btn=gr.Button("✅ Add",size="sm",variant="primary",visible=False,scale=1)
                 upload_result=gr.Markdown("")
                 close_upload_btn=gr.Button("✕ Close",size="sm",variant="secondary")
+            gr.HTML('<div style="padding:0 12px;"><div style="color:#c9a84c;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin-top:18px;margin-bottom:8px;">📊 Analytics</div></div>')
+            analytics_btn=gr.Button("Load Analytics",size="sm",variant="secondary")
+            analytics_display=gr.Markdown("")
 
         # CENTER CHAT
         with gr.Column(scale=3):
@@ -390,7 +385,6 @@ with gr.Blocks(title="Devreotes Lab Research Assistant", css=CUSTOM_CSS) as demo
                 send_btn=gr.Button("Send",scale=1,variant="primary")
             with gr.Row():
                 lang_toggle=gr.Radio(choices=["English","Français"],value="English",label="🌐",scale=2)
-            # Dynamic follow-up suggestions
             gr.HTML('<div style="color:#c9a84c;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin-top:8px;margin-bottom:6px;">💡 Suggested Follow-ups</div>')
             fup1=gr.Button("How does Ras regulate cell migration?",size="sm",visible=True)
             fup2=gr.Button("What is the most studied protein?",size="sm",visible=True)
@@ -478,5 +472,12 @@ with gr.Blocks(title="Devreotes Lab Research Assistant", css=CUSTOM_CSS) as demo
     export_btn.click(handle_export,[chatbot],[export_file])
     analytics_btn.click(load_analytics,outputs=[analytics_display])
     paper_lookup_btn.click(lookup_paper,[paper_input],[paper_details])
+
+    # LOAD DYNAMIC STATS ON STARTUP
+    def load_stats():
+        c = get_graph_counts()
+        return f"📄 **{c['Paper']}** Papers · 🧬 **{c['Protein']}** Proteins\n\n🔬 **{c['Method']}** Methods · 💡 **{c['Concept']}** Concepts"
+
+    demo.load(load_stats, outputs=[stats_display])
 
 demo.launch(server_name="0.0.0.0",server_port=7860)
