@@ -400,14 +400,15 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
         button[class*="sm"] {
             font-size: 12px !important;
         }
-        /* Force all text white */
-        * { color: #ffffff !important; }
-        button { color: #c9a84c !important; }
+        /* FORCE EVERYTHING WHITE */
+        *, *::before, *::after, label, span, p, div, input, textarea, 
+        [class*="label"], [class*="wrap"], [class*="radio"], [class*="checkbox"],
+        [class*="dropdown"], [class*="file"], [class*="upload"], [role="radio"],
+        [role="radiogroup"], .secondary-wrap, .upload-text, .file-preview {
+            color: #ffffff !important;
+        }
+        button.secondary, button[class*="sm"] { color: #c9a84c !important; }
         button.primary { color: #0c1a2e !important; }
-        input, textarea { color: #ffffff !important; }
-        /* Radio buttons force white */
-        input[type="radio"] + label, .wrap label, [data-testid="radio"] label, [role="radio"] span, [role="radiogroup"] label { color: #ffffff !important; }
-        .gradio-radio *, [data-testid="radio"] * { color: #ffffff !important; }
         /* Hide footer */
         footer { display: none !important; }
     </style>
