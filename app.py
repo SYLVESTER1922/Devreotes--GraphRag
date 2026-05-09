@@ -306,6 +306,100 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
     upload_entities_state=gr.State("")
     followup_state=gr.State([])
 
+    # RUNTIME CSS — Chat bubble styling
+    gr.HTML("""
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap');
+
+        body, .gradio-container {
+            background: #050d1a !important;
+            font-family: 'Lato', sans-serif !important;
+        }
+
+        /* User bubbles */
+        .message.user > div, div[class*="message"][class*="user"] > div:last-child {
+            background: linear-gradient(135deg, #0d2147, #162d5a) !important;
+            color: #b8d4f0 !important;
+            border: 1px solid rgba(201,168,76,0.15) !important;
+            border-radius: 16px 16px 4px 16px !important;
+            padding: 12px 16px !important;
+        }
+
+        /* Bot bubbles */
+        .message.bot > div, div[class*="message"][class*="bot"] > div:last-child,
+        .message.assistant > div, div[class*="message"][class*="assistant"] > div:last-child {
+            background: linear-gradient(135deg, #091428, #0d1b2e) !important;
+            color: #e0e8f0 !important;
+            border: 1px solid rgba(201,168,76,0.1) !important;
+            border-radius: 16px 16px 16px 4px !important;
+            padding: 12px 16px !important;
+        }
+
+        /* Bold text in bot messages */
+        .message.bot strong, .message.assistant strong,
+        div[class*="message"][class*="bot"] strong,
+        div[class*="message"][class*="assistant"] strong {
+            color: #c9a84c !important;
+        }
+
+        /* Links */
+        .message a, div[class*="message"] a {
+            color: #e8d48b !important;
+            text-decoration: underline !important;
+        }
+
+        /* Sidebar text visibility */
+        .prose, .markdown-text, .svelte-1ed2p3z, label, .label-wrap,
+        span, p, div { color: #c8d6e5; }
+        .gradio-dropdown label, .gradio-radio label { color: #c8d6e5 !important; }
+
+        /* Input styling */
+        input, textarea, .textbox textarea {
+            background: #0a1628 !important;
+            color: #e0e8f0 !important;
+            border: 1px solid rgba(201,168,76,0.2) !important;
+            border-radius: 10px !important;
+        }
+
+        /* Button styling */
+        button.secondary {
+            background: linear-gradient(135deg, #0d1b2e, #162640) !important;
+            color: #c9a84c !important;
+            border: 1px solid rgba(201,168,76,0.2) !important;
+            border-radius: 8px !important;
+        }
+        button.secondary:hover {
+            border-color: #c9a84c !important;
+        }
+        button.primary {
+            background: linear-gradient(135deg, #8a6d1b, #c9a84c) !important;
+            color: #0c1a2e !important;
+            border: none !important;
+            border-radius: 8px !important;
+            font-weight: 700 !important;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #c9a84c; border-radius: 4px; }
+
+        /* Chatbot container */
+        .chatbot, div[class*="chatbot"] {
+            background: #070e1a !important;
+            border: 1px solid rgba(201,168,76,0.1) !important;
+            border-radius: 16px !important;
+        }
+
+        /* Follow-up buttons */
+        button[class*="sm"] {
+            font-size: 12px !important;
+        }
+
+        /* Hide footer */
+        footer { display: none !important; }
+    </style>
+    """)
+
     # HEADER
     gr.HTML("""
         <div style="background: linear-gradient(135deg, #0c1a2e 0%, #1a2d4a 30%, #243b5c 60%, #0c1a2e 100%);
