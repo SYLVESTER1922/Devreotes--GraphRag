@@ -319,7 +319,7 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
         /* User bubbles */
         .message.user > div, div[class*="message"][class*="user"] > div:last-child {
             background: linear-gradient(135deg, #0d2147, #162d5a) !important;
-            color: #b8d4f0 !important;
+            color: #ffffff !important;
             border: 1px solid rgba(201,168,76,0.15) !important;
             border-radius: 16px 16px 4px 16px !important;
             padding: 12px 16px !important;
@@ -329,7 +329,7 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
         .message.bot > div, div[class*="message"][class*="bot"] > div:last-child,
         .message.assistant > div, div[class*="message"][class*="assistant"] > div:last-child {
             background: linear-gradient(135deg, #091428, #0d1b2e) !important;
-            color: #e0e8f0 !important;
+            color: #ffffff !important;
             border: 1px solid rgba(201,168,76,0.1) !important;
             border-radius: 16px 16px 16px 4px !important;
             padding: 12px 16px !important;
@@ -348,10 +348,13 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
             text-decoration: underline !important;
         }
 
-        /* Sidebar text visibility */
-        .prose, .markdown-text, .svelte-1ed2p3z, label, .label-wrap,
-        span, p, div { color: #c8d6e5; }
-        .gradio-dropdown label, .gradio-radio label { color: #c8d6e5 !important; }
+        /* Sidebar text — white */
+        .prose, .markdown-text, label, .label-wrap,
+        span, p, div, .svelte-1ed2p3z { color: #ffffff !important; }
+        .gradio-dropdown label, .gradio-radio label { color: #ffffff !important; }
+        
+        /* Gold headings and labels */
+        h1, h2, h3, h4, h5, h6, strong { color: #c9a84c !important; }
 
         /* Input styling */
         input, textarea, .textbox textarea {
