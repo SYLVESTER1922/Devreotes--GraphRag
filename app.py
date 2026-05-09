@@ -272,7 +272,15 @@ def lookup_paper(ps):
         if not r: return f"Paper #{pn} not found."
         ti=r['t'] or '?'; url=f"https://scholar.google.com/scholar?q={'+'.join(ti.split()[:10])}"
         return f"**Paper #{pn}** ({r['y']})\n\n**Title:** {ti}\n**Journal:** {r['j'] or 'N/A'}\n**Authors:** {r['a'] or 'N/A'}\n**Findings:** {r['f'] or 'N/A'}\n**Proteins:** {', '.join(r['pr']) or 'None'}\n**Methods:** {', '.join(r['me']) or 'None'}\n**Concepts:** {', '.join(r['co']) or 'None'}\n**Organisms:** {', '.join(r['og']) or 'None'}\n\n[🔗 Google Scholar]({url})"
-
+def get_graph_counts():
+    try:
+        with driver.session() as s:
+            counts = {}
+            for label in ['Paper','Protein','Method','Concept']:
+                counts[label] = s.run(f"MATCH (n:{label}) RETURN count(n) AS c").single()["c"]
+            return counts
+    except:
+        return {'Paper': '—', 'Protein': '—', 'Method': '—', 'Concept': '—'}[]
 search_history={}; history_order=[]; current_lang="en"
 
 def chat_fn(message, history):
