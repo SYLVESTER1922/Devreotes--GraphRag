@@ -400,7 +400,11 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
         button[class*="sm"] {
             font-size: 12px !important;
         }
-
+        /* Force all text white */
+        * { color: #ffffff !important; }
+        button { color: #c9a84c !important; }
+        button.primary { color: #0c1a2e !important; }
+        input, textarea { color: #ffffff !important; }     
         /* Hide footer */
         footer { display: none !important; }
     </style>
