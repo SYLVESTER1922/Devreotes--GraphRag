@@ -355,6 +355,9 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
         
         /* Gold headings and labels */
         h1, h2, h3, h4, h5, h6, strong { color: #c9a84c !important; }
+        .markdown-text, .md, div[class*="markdown"] { color: #ffffff !important; }
+        .markdown-text code, div[class*="markdown"] code, .markdown-text pre, div[class*="markdown"] pre { color: #c9a84c !important; background: #0a1628 !important; }
+        .gradio-radio input + label, .gradio-radio span, div[class*="radio"] label, div[class*="radio"] span { color: #ffffff !important; }
 
         /* Input styling */
         input, textarea, .textbox textarea {
