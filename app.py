@@ -265,7 +265,7 @@ def load_analytics():
         tp=[f"  {r['n']}: {'█'*(r['c']//3)} {r['c']}" for r in s.run("MATCH (p:Paper)-[:MENTIONS_PROTEIN]->(pr:Protein) RETURN pr.name AS n,count(p) AS c ORDER BY c DESC LIMIT 5")]
         tm=[f"  {r['n']}: {'█'*(r['c']//2)} {r['c']}" for r in s.run("MATCH (p:Paper)-[:USES_METHOD]->(m:Method) RETURN m.name AS n,count(p) AS c ORDER BY c DESC LIMIT 5")]
         tc=[f"  {r['n']}: {'█'*(r['c']//5)} {r['c']}" for r in s.run("MATCH (p:Paper)-[:EXPLORES_CONCEPT]->(c:Concept) RETURN c.name AS n,count(p) AS c ORDER BY c DESC LIMIT 5")]
-    return f"**Overview**\n- Papers: **{pc}** | Proteins: **{prc}** | Genes: **{gc}**\n- Methods: **{mc}** | Concepts: **{cc}** | Organisms: **{oc}**\n- Relationships: **{rc}**\n\n**Papers by Decade**\n```\n"+"\n".join(dl)+"\n```\n\n**Top Proteins/Genes**\n```\n"+"\n".join(tp)+"\n```\n\n**Top Methods**\n```\n"+"\n".join(tm)+"\n```\n\n**Top Concepts**\n```\n"+"\n".join(tc)+"\n```"
+    return f"**Overview**\n\n**Papers:** **{pc}** | **Proteins:** **{prc}** | **Genes:** **{gc}**\n\n**Methods:** **{mc}** | **Concepts:** **{cc}** | **Organisms:** **{oc}**\n\n**Relationships:** **{rc}**\n\n**Papers by Decade**\n```\n"+"\n".join(dl)+"\n```\n\n**Top Proteins/Genes**\n```\n"+"\n".join(tp)+"\n```\n\n**Top Methods**\n```\n"+"\n".join(tm)+"\n```\n\n**Top Concepts**\n```\n"+"\n".join(tc)+"\n```"
 
 def lookup_paper(ps):
     if not ps: return "Enter a paper number."
