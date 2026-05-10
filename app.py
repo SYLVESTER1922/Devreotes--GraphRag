@@ -151,11 +151,7 @@ def generate_answer(question, conv_hist=None, lang="en"):
         return "I'm the Devreotes Lab Research Assistant. I answer questions about research papers spanning 1975 to 2025.", ["What is PTEN?","Papers from the 2020s?","How many proteins?"]
     if any(w in q for w in ['thank','merci']): return ("De rien !" if lang=="fr" else "You're welcome!"), []
     if any(w in q for w in ['bye','goodbye','au revoir']): return ("Au revoir !" if lang=="fr" else "Goodbye!"), []
-    if len(q.split()) <= 1 and q not in ['statistics','overview','stats']:
-    if lang=="fr": return "Pourriez-vous reformuler votre question ?", []
-        return "Could you please rephrase your question?", []
-
-    msgs=[{"role":"system","content":get_sys_prompt(lang)}]
+        msgs=[{"role":"system","content":get_sys_prompt(lang)}]
     if conv_hist:
         for t in conv_hist[-8:]: msgs.append(t)
     is_conv=False
