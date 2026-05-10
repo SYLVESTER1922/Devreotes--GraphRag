@@ -400,18 +400,27 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
         button[class*="sm"] {
             font-size: 12px !important;
         }
-        /* FORCE EVERYTHING WHITE */
-        *, *::before, *::after, label, span, p, div, input, textarea, 
-        [class*="label"], [class*="wrap"], [class*="radio"], [class*="checkbox"],
-        [class*="dropdown"], [class*="file"], [class*="upload"], [role="radio"],
-        [role="radiogroup"], .secondary-wrap, .upload-text, .file-preview 
-        [data-testid] *, [class*="svelte"] *, .wrap *, .container * { color: #ffffff !important; }
-        input[type="radio"] { accent-color: #c9a84c !important; }
-        {
-            color: #ffffff !important;
-        }
-        button.secondary, button[class*="sm"] { color: #c9a84c !important; }
+        /* Sidebar and general text — white */
+        .prose, .markdown-text, label, .label-wrap, p, h1, h2, h3, h4, h5, h6 { color: #ffffff !important; }
+        strong, b { color: #c9a84c !important; }
+        
+        /* Analytics code blocks — gold on dark */
+        pre, code { color: #c9a84c !important; background: #0a1628 !important; }
+        
+        /* Dropdown and input text */
+        input, textarea, select, option { color: #ffffff !important; }
+        .gradio-dropdown label { color: #ffffff !important; }
+        
+        /* Buttons */
+        button.secondary { color: #c9a84c !important; }
         button.primary { color: #0c1a2e !important; }
+        
+        /* Chat icons — keep default */
+        button svg, .icon-button, [class*="icon"] { color: inherit !important; }
+        
+        /* Voice/audio component */
+        .audio-component *, [data-testid="audio"] * { color: #ffffff !important; }
+        .audio-component button, [data-testid="audio"] button { color: #c9a84c !important; }
         /* Hide footer */
         footer { display: none !important; }
     </style>
