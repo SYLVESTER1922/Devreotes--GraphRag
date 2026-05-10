@@ -460,7 +460,7 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
                 </svg>
             </div>
             <div style="position: relative; text-align: center;">
-                <div style="font-size: 24px; font-weight: 700; color: #c9a84c !important;
+                <div style="font-size: 28px; font-weight: 700; color: #c9a84c !important;
                             letter-spacing: 0.5px; font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, Georgia, serif;">
                     Devreotes Lab Research Assistant</div>
                 <div style="font-size: 11px; color: #c9a84c; font-weight: 600;
