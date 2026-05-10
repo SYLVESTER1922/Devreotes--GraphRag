@@ -492,6 +492,19 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
             background: #050d1a !important;
             color: #ffffff !important;
         }
+        /* Microphone button and label */
+        audio, .audio-label, [data-testid="audio"] *,
+        [class*="audio"] label span, [class*="audio"] button span,
+        .microphone *, [aria-label*="audio"] *,
+        [class*="waveform"] *, [class*="player"] *,
+        .audio-container *, .audio-input * {
+            color: #ffffff !important;
+            background-color: #050d1a !important;
+        }
+        [class*="audio"] button {
+            color: #c9a84c !important;
+            background: #0a1628 !important;
+        }
     </style>
     """)
 
