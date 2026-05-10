@@ -151,7 +151,12 @@ def generate_answer(question, conv_hist=None, lang="en"):
         return "I'm the Devreotes Lab Research Assistant. I answer questions about research papers spanning 1975 to 2025.", ["What is PTEN?","Papers from the 2020s?","How many proteins?"]
     if any(w in q for w in ['thank','merci']): return ("De rien !" if lang=="fr" else "You're welcome!"), []
     if any(w in q for w in ['bye','goodbye','au revoir']): return ("Au revoir !" if lang=="fr" else "Goodbye!"), []
-        msgs=[{"role":"system","content":get_sys_prompt(lang)}]
+
+    if len(q.split()) <= 1 and q not in ['statistics','overview','stats']:
+        if lang=="fr": return "Pourriez-vous reformuler votre question ?", []
+        return "Could you please rephrase your question?", []
+
+    msgs=[{"role":"system","content":get_sys_prompt(lang)}]
     if conv_hist:
         for t in conv_hist[-8:]: msgs.append(t)
     is_conv=False
@@ -164,7 +169,6 @@ def generate_answer(question, conv_hist=None, lang="en"):
         msgs.append({"role":"user","content":question})
         ans=client.chat.completions.create(model="gpt-4o-mini",messages=msgs,temperature=0.3,max_tokens=800).choices[0].message.content
         return parse_followups(ans)
-
     corrected=correct_spelling(question) if len(question.split())>4 else question
     gc=query_graph(corrected)
     if gc=="NO_RESULTS":
