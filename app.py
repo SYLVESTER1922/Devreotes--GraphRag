@@ -521,7 +521,7 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
                 <div style="color: #c9a84c; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px;">About the Lab</div>
                 <div style="background: linear-gradient(135deg, #0f1c30, #162640); border: 1px solid rgba(201,168,76,0.15);
                             border-radius: 12px; padding: 16px; font-size: 12px; color: #8a9bb8; line-height: 1.7;">
-                    <strong style="color: #f0e6c8;">Prof. Peter N. Devreotes</strong><br>
+                    <strong style="color: #c9a84c;">Prof. Peter N. Devreotes</strong><br>
                     Department of Cell Biology<br>
                     Johns Hopkins School of Medicine<br><br>
                     Research spanning <strong style="color: #c9a84c;">1975 &ndash; 2025</strong> focusing on
