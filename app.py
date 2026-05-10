@@ -495,7 +495,6 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
                 voice_input=gr.Audio(sources=["microphone"],type="filepath",label="🎤",scale=1)
                 send_btn=gr.Button("Send",scale=1,variant="primary")
             with gr.Row():
-                with gr.Row():
                 lang_en=gr.Button("🇬🇧 English",size="sm",variant="secondary")
                 lang_fr=gr.Button("🇫🇷 Français",size="sm",variant="secondary")
             gr.HTML('<div style="color:#c9a84c;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin-top:8px;margin-bottom:6px;">💡 Suggested Follow-ups</div>')
