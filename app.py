@@ -238,10 +238,10 @@ def confirm_upload(ej,pw):
     ti=ent.get("title","")
     with driver.session() as ss:
         dups=list(ss.run("MATCH (p:Paper) WHERE toLower(p.title) CONTAINS $t RETURN p.number AS n,p.title AS t,p.year AS y LIMIT 3",t=ti[:50].lower()))
-        if dups: return "⚠️ **Similar exists:**\n"+"\n".join([f"  **#{d['n']}** ({d['y']}): {d['t']}" for d in dups])+"\n**NOT added.**",gr.update(visible=True)
+        if dups: return '<span style="color:#c9a84c;">⚠️ Similar exists:</span><br>'+"\n".join([f"  **#{d['n']}** ({d['y']}): {d['t']}" for d in dups])+"\n**NOT added.**",gr.update(visible=True)
     pn=next_pn(); _,errs=load_to_graph(pn,ent)
     np=len(ent.get("proteins",[])); nm=len(ent.get("methods",[])); nc=len(ent.get("concepts",[])); no=len(ent.get("model_organisms",[]))
-    return f"✅ **Paper #{pn} added!** **{np}** proteins, **{nm}** methods, **{nc}** concepts, **{no}** organisms.",gr.update(visible=False)
+    return f'<span style="color:#c9a84c;">✅ Paper #{pn} added! {np} proteins, {nm} methods, {nc} concepts, {no} organisms.</span>',gr.update(visible=False)
 
 def export_chat(ch):
     if not ch: return None
@@ -315,12 +315,27 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap');
 
+        /* Base */
         body, .gradio-container {
             background: #050d1a !important;
             font-family: 'Lato', sans-serif !important;
+            color: #ffffff !important;
         }
 
-        /* User bubbles */
+        /* ALL TEXT WHITE by default */
+        p, span, div, label, li, td, th, dt, dd,
+        .prose, .markdown-text, .label-wrap,
+        input, textarea, select, option,
+        [class*="svelte"], .wrap, .container,
+        [data-testid] span, [data-testid] label,
+        [data-testid] p, [data-testid] div { 
+            color: #ffffff !important; 
+        }
+
+        /* Gold for headings, bold, strong */
+        h1, h2, h3, h4, h5, h6, strong, b { color: #c9a84c !important; }
+
+        /* User chat bubbles */
         .message.user > div, div[class*="message"][class*="user"] > div:last-child {
             background: linear-gradient(135deg, #0d2147, #162d5a) !important;
             color: #ffffff !important;
@@ -329,9 +344,10 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
             padding: 12px 16px !important;
         }
 
-        /* Bot bubbles */
-        .message.bot > div, div[class*="message"][class*="bot"] > div:last-child,
-        .message.assistant > div, div[class*="message"][class*="assistant"] > div:last-child {
+        /* Bot chat bubbles */
+        .message.bot > div, .message.assistant > div,
+        div[class*="message"][class*="bot"] > div:last-child,
+        div[class*="message"][class*="assistant"] > div:last-child {
             background: linear-gradient(135deg, #091428, #0d1b2e) !important;
             color: #ffffff !important;
             border: 1px solid rgba(201,168,76,0.1) !important;
@@ -339,59 +355,45 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
             padding: 12px 16px !important;
         }
 
-        /* Bold text in bot messages */
-        .message.bot strong, .message.assistant strong,
-        div[class*="message"][class*="bot"] strong,
-        div[class*="message"][class*="assistant"] strong {
-            color: #c9a84c !important;
+        /* Bold/strong in chat = gold */
+        .message strong, div[class*="message"] strong { color: #c9a84c !important; }
+
+        /* Links = light gold */
+        a, .message a, div[class*="message"] a { color: #e8d48b !important; text-decoration: underline !important; }
+
+        /* Code blocks in analytics = white text on dark bg */
+        pre, code, pre *, code * { 
+            color: #ffffff !important; 
+            background: #0a1628 !important; 
         }
 
-        /* Links */
-        .message a, div[class*="message"] a {
-            color: #e8d48b !important;
-            text-decoration: underline !important;
-        }
-
-        /* Sidebar text — white */
-        .prose, .markdown-text, label, .label-wrap,
-        span, p, div, .svelte-1ed2p3z { color: #ffffff !important; }
-        .gradio-dropdown label, .gradio-radio label { color: #ffffff !important; }
-        
-        /* Gold headings and labels */
-        h1, h2, h3, h4, h5, h6, strong { color: #c9a84c !important; }
-        .markdown-text, .md, div[class*="markdown"] { color: #ffffff !important; }
-        .markdown-text code, div[class*="markdown"] code, .markdown-text pre, div[class*="markdown"] pre { color: #c9a84c !important; background: #0a1628 !important; }
-        .gradio-radio input + label, .gradio-radio span, div[class*="radio"] label, div[class*="radio"] span { color: #ffffff !important; }
-
-        /* Input styling */
+        /* Input fields */
         input, textarea, .textbox textarea {
             background: #0a1628 !important;
-            color: #e0e8f0 !important;
+            color: #ffffff !important;
             border: 1px solid rgba(201,168,76,0.2) !important;
             border-radius: 10px !important;
         }
 
-        /* Button styling */
-        button.secondary {
+        /* Secondary buttons = gold text */
+        button.secondary, button[class*="secondary"] {
             background: linear-gradient(135deg, #0d1b2e, #162640) !important;
             color: #c9a84c !important;
             border: 1px solid rgba(201,168,76,0.2) !important;
             border-radius: 8px !important;
         }
-        button.secondary:hover {
+        button.secondary:hover, button[class*="secondary"]:hover {
             border-color: #c9a84c !important;
         }
-        button.primary {
+
+        /* Primary button = dark text on gold */
+        button.primary, button[class*="primary"] {
             background: linear-gradient(135deg, #8a6d1b, #c9a84c) !important;
             color: #0c1a2e !important;
             border: none !important;
             border-radius: 8px !important;
             font-weight: 700 !important;
         }
-
-        /* Scrollbar */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-thumb { background: #c9a84c; border-radius: 4px; }
 
         /* Chatbot container */
         .chatbot, div[class*="chatbot"] {
@@ -400,32 +402,28 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
             border-radius: 16px !important;
         }
 
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #c9a84c; border-radius: 4px; }
+
+        /* File upload area */
+        .upload-text, .file-preview, [class*="upload"] span,
+        [class*="file"] span, [class*="drop"] span { color: #ffffff !important; }
+
+        /* Audio/voice component */
+        [class*="audio"] *, [data-testid*="audio"] * { color: #ffffff !important; }
+
+        /* Dropdown */
+        [class*="dropdown"] * { color: #ffffff !important; }
+
+        /* SVG icons in chat (copy, delete) - keep them visible */
+        button svg { color: #8a9bb8 !important; fill: #8a9bb8 !important; }
+        button:hover svg { color: #c9a84c !important; fill: #c9a84c !important; }
+
         /* Follow-up buttons */
-        button[class*="sm"] {
-            font-size: 12px !important;
-        }
-        /* Sidebar and general text — white */
-        .prose, .markdown-text, label, .label-wrap, p, h1, h2, h3, h4, h5, h6 { color: #ffffff !important; }
-        strong, b { color: #c9a84c !important; }
-        
-        /* Analytics code blocks — gold on dark */
-        pre, code { color: #c9a84c !important; background: #0a1628 !important; }
-        
-        /* Dropdown and input text */
-        input, textarea, select, option { color: #c9a84c !important; }
-        .gradio-dropdown label { color: #c9a84c !important; }
-        
-        /* Buttons */
-        button.secondary { color: #c9a84c !important; }
-        button.primary { color: #0c1a2e !important; }
-        
-        /* Chat icons — keep default */
-        button svg, .icon-button, [class*="icon"] { color: inherit !important; }
-        
-        /* Voice/audio component */
-        .audio-component *, [data-testid="audio"] * { color: #ffffff !important; }
-        .audio-component button, [data-testid="audio"] button { color: #c9a84c !important; }
-        /* Hide footer */
+        button[class*="sm"] { font-size: 12px !important; }
+
+        /* Hide Gradio footer */
         footer { display: none !important; }
     </style>
     """)
@@ -494,7 +492,7 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
                 with gr.Row():
                     upload_password=gr.Textbox(placeholder="Password",type="password",show_label=False,scale=2)
                     confirm_btn=gr.Button("✅ Add",size="sm",variant="primary",visible=False,scale=1)
-                upload_result=gr.Markdown("")
+                upload_result=gr.HTML("")
                 close_upload_btn=gr.Button("✕ Close",size="sm",variant="secondary")
             gr.HTML('<div style="padding:0 12px;"><div style="color:#c9a84c;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin-top:18px;margin-bottom:8px;">📊 Analytics</div></div>')
             analytics_btn=gr.Button("Load Analytics",size="sm",variant="secondary")
