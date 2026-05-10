@@ -238,10 +238,10 @@ def confirm_upload(ej,pw):
     ti=ent.get("title","")
     with driver.session() as ss:
         dups=list(ss.run("MATCH (p:Paper) WHERE toLower(p.title) CONTAINS $t RETURN p.number AS n,p.title AS t,p.year AS y LIMIT 3",t=ti[:50].lower()))
-        if dups: return "⚠️ Similar exists:\n"+"\n".join([f"  #{d['n']} ({d['y']}): {d['t']}" for d in dups])+"\nNOT added.",gr.update(visible=True)
+        if dups: return "⚠️ **Similar exists:**\n"+"\n".join([f"  **#{d['n']}** ({d['y']}): {d['t']}" for d in dups])+"\n**NOT added.**",gr.update(visible=True)
     pn=next_pn(); _,errs=load_to_graph(pn,ent)
     np=len(ent.get("proteins",[])); nm=len(ent.get("methods",[])); nc=len(ent.get("concepts",[])); no=len(ent.get("model_organisms",[]))
-    return f"✅ Paper #{pn} added! {np} proteins, {nm} methods, {nc} concepts, {no} organisms.",gr.update(visible=False)
+    return f"✅ **Paper #{pn} added!** **{np}** proteins, **{nm}** methods, **{nc}** concepts, **{no}** organisms.",gr.update(visible=False)
 
 def export_chat(ch):
     if not ch: return None
