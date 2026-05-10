@@ -404,7 +404,10 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
         *, *::before, *::after, label, span, p, div, input, textarea, 
         [class*="label"], [class*="wrap"], [class*="radio"], [class*="checkbox"],
         [class*="dropdown"], [class*="file"], [class*="upload"], [role="radio"],
-        [role="radiogroup"], .secondary-wrap, .upload-text, .file-preview {
+        [role="radiogroup"], .secondary-wrap, .upload-text, .file-preview 
+        [data-testid] *, [class*="svelte"] *, .wrap *, .container * { color: #ffffff !important; }
+        input[type="radio"] { accent-color: #c9a84c !important; }
+        {
             color: #ffffff !important;
         }
         button.secondary, button[class*="sm"] { color: #c9a84c !important; }
