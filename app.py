@@ -412,8 +412,8 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
         pre, code { color: #c9a84c !important; background: #0a1628 !important; }
         
         /* Dropdown and input text */
-        input, textarea, select, option { color: #ffffff !important; }
-        .gradio-dropdown label { color: #ffffff !important; }
+        input, textarea, select, option { color: #c9a84c !important; }
+        .gradio-dropdown label { color: #c9a84c !important; }
         
         /* Buttons */
         button.secondary { color: #c9a84c !important; }
@@ -586,7 +586,7 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
         return ch,gr.update(value=None)
     history_dropdown.change(replay,[history_dropdown,chatbot],[chatbot,history_dropdown])
 
-    add_paper_btn.click(fn=lambda:gr.update(visible=True),outputs=[upload_section])
+    add_paper_btn.click(fn=lambda:gr.update(visible=True),outputs=[upload_section])F
     close_upload_btn.click(fn=lambda:gr.update(visible=False),outputs=[upload_section])
     def handle_upload(f):
         p,ej=process_upload(f)
