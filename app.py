@@ -425,6 +425,73 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
 
         /* Hide Gradio footer */
         footer { display: none !important; }
+
+        /* FORCE dark backgrounds on all Gradio containers */
+        .gradio-container, .gr-box, .gr-panel, .gr-form, .gr-input-label,
+        .gr-block, .gr-padded, .contain, .gap, .form,
+        [class*="block"], [class*="panel"], [class*="form"], [class*="group"],
+        [class*="wrap"], [class*="container"], [class*="input"],
+        [class*="textbox"], [class*="dropdown"], [class*="audio"],
+        [class*="file"], [class*="upload"], [class*="accordion"],
+        .secondary-wrap, .primary-wrap {
+            background: #050d1a !important;
+            background-color: #050d1a !important;
+        }
+
+        /* Dropdown menu items */
+        [class*="dropdown"] ul, [class*="dropdown"] li,
+        [class*="dropdown"] option, [role="listbox"],
+        [role="option"], .options, ul[class*="options"] {
+            background: #0a1628 !important;
+            color: #ffffff !important;
+        }
+
+        /* Audio record button label */
+        [class*="audio"] label, [class*="audio"] span,
+        [class*="audio"] p, [class*="audio"] div,
+        [class*="record"] *, [class*="mic"] * {
+            color: #ffffff !important;
+        }
+
+        /* File upload drop zone */
+        [class*="upload"], [class*="drop-zone"], [class*="file-upload"],
+        [class*="upload"] *, [class*="file"] div,
+        [class*="file"] span, [class*="file"] p {
+            background: #0a1628 !important;
+            color: #ffffff !important;
+            border-color: rgba(201,168,76,0.2) !important;
+        }
+
+        /* Search history dropdown */
+        [class*="dropdown"] input, [class*="dropdown"] div,
+        [class*="dropdown"] span, [class*="dropdown"] label,
+        [class*="dropdown"] button {
+            background: #0a1628 !important;
+            color: #ffffff !important;
+        }
+
+        /* Upload preview and result areas */
+        [class*="markdown"], [class*="html"],
+        [class*="markdown"] *, [class*="html"] * {
+            color: #ffffff !important;
+        }
+        [class*="markdown"] strong, [class*="html"] strong {
+            color: #c9a84c !important;
+        }
+
+        /* Warning/success messages */
+        .message-wrap, [class*="message-wrap"],
+        [class*="info"], [class*="warning"], [class*="error"] {
+            background: #0a1628 !important;
+            color: #ffffff !important;
+        }
+
+        /* Accordion/Group backgrounds */
+        details, summary, [class*="accordion"],
+        [class*="group"], fieldset {
+            background: #050d1a !important;
+            color: #ffffff !important;
+        }
     </style>
     """)
 
