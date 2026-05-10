@@ -495,7 +495,9 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
                 voice_input=gr.Audio(sources=["microphone"],type="filepath",label="🎤",scale=1)
                 send_btn=gr.Button("Send",scale=1,variant="primary")
             with gr.Row():
-                lang_toggle=gr.Radio(choices=["English","Français"],value="English",label="🌐",scale=2)
+                with gr.Row():
+                lang_en=gr.Button("🇬🇧 English",size="sm",variant="secondary")
+                lang_fr=gr.Button("🇫🇷 Français",size="sm",variant="secondary")
             gr.HTML('<div style="color:#c9a84c;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin-top:8px;margin-bottom:6px;">💡 Suggested Follow-ups</div>')
             fup1=gr.Button("How does Ras regulate cell migration?",size="sm",visible=True)
             fup2=gr.Button("What is the most studied protein?",size="sm",visible=True)
@@ -529,7 +531,8 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
         return (gr.update(value="How does Ras regulate cell migration?"),
                 gr.update(value="What is the most studied protein?"),
                 gr.update(value="Which papers use optogenetics?"))
-    lang_toggle.change(set_lang,[lang_toggle],[fup1,fup2,fup3])
+    lang_en.click(fn=lambda: set_lang("English"),outputs=[fup1,fup2,fup3])
+    lang_fr.click(fn=lambda: set_lang("Français"),outputs=[fup1,fup2,fup3])
 
     def respond(message,ch):
         if not message or not message.strip(): return "",ch,gr.update(choices=get_vis_hist(),value=None),gr.update(),gr.update(),gr.update()
