@@ -288,12 +288,12 @@ def get_graph_counts():
     except:
         return {'Paper':'—','Protein':'—','Method':'—','Concept':'—'}
 
-search_history={}; history_order=[]; current_lang="en"
+search_history={}; history_order=[]
 
-def chat_fn(message, history):
-    global search_history, history_order, current_lang
+def chat_fn(message, history, lang="en"):
+    global search_history, history_order
     conv=[h for h in history if isinstance(h,dict)]
-    answer, followups = generate_answer(message, conv, current_lang)
+    answer, followups = generate_answer(message, conv, lang)
     skip=['hi','hello','hey','thanks','thank you','bye','goodbye','bonjour','salut','merci','au revoir','']
     if message.strip().lower() not in skip:
         search_history[message]=answer
@@ -309,6 +309,7 @@ def get_vis_hist(): return history_order[:10]
 with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
     upload_entities_state=gr.State("")
     followup_state=gr.State([])
+    lang_state=gr.State("en")
 
     # RUNTIME CSS — Chat bubble styling
     gr.HTML("""
@@ -612,44 +613,45 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
 
     # EVENT HANDLERS
     def set_lang(lc):
-        global current_lang
-        current_lang="fr" if lc=="Français" else "en"
-        if current_lang=="fr":
-            return (gr.update(value="Comment Ras régule-t-il la migration cellulaire ?"),
+        lang="fr" if lc=="Français" else "en"
+        if lang=="fr":
+            return (lang,
+                    gr.update(value="Comment Ras régule-t-il la migration cellulaire ?"),
                     gr.update(value="Quelle est la protéine la plus étudiée ?"),
                     gr.update(value="Quels articles utilisent l'optogénétique ?"))
-        return (gr.update(value="How does Ras regulate cell migration?"),
+        return (lang,
+                gr.update(value="How does Ras regulate cell migration?"),
                 gr.update(value="What is the most studied protein?"),
                 gr.update(value="Which papers use optogenetics?"))
-    lang_en.click(fn=lambda: set_lang("English"),outputs=[fup1,fup2,fup3])
-    lang_fr.click(fn=lambda: set_lang("Français"),outputs=[fup1,fup2,fup3])
+    lang_en.click(fn=lambda: set_lang("English"),outputs=[lang_state,fup1,fup2,fup3])
+    lang_fr.click(fn=lambda: set_lang("Français"),outputs=[lang_state,fup1,fup2,fup3])
 
-    def respond(message,ch):
+    def respond(message,ch,lang):
         if not message or not message.strip(): return "",ch,gr.update(choices=get_vis_hist(),value=None),gr.update(),gr.update(),gr.update()
-        answer,followups=chat_fn(message,ch)
+        answer,followups=chat_fn(message,ch,lang)
         ch.append({"role":"user","content":message}); ch.append({"role":"assistant","content":answer})
         f1=gr.update(value=followups[0],visible=True) if len(followups)>0 else gr.update(visible=False)
         f2=gr.update(value=followups[1],visible=True) if len(followups)>1 else gr.update(visible=False)
         f3=gr.update(value=followups[2],visible=True) if len(followups)>2 else gr.update(visible=False)
         return "",ch,gr.update(choices=get_vis_hist(),value=None),f1,f2,f3
 
-    def respond_voice(ap,ch):
+    def respond_voice(ap,ch,lang):
         if not ap: return "",ch,gr.update(choices=get_vis_hist(),value=None),gr.update(),gr.update(),gr.update(),None
         text,_=transcribe_audio(ap)
         if not text: return "",ch,gr.update(choices=get_vis_hist(),value=None),gr.update(),gr.update(),gr.update(),None
-        answer,followups=chat_fn(text,ch)
+        answer,followups=chat_fn(text,ch,lang)
         ch.append({"role":"user","content":f"🎤 {text}"}); ch.append({"role":"assistant","content":answer})
         f1=gr.update(value=followups[0],visible=True) if len(followups)>0 else gr.update(visible=False)
         f2=gr.update(value=followups[1],visible=True) if len(followups)>1 else gr.update(visible=False)
         f3=gr.update(value=followups[2],visible=True) if len(followups)>2 else gr.update(visible=False)
         return "",ch,gr.update(choices=get_vis_hist(),value=None),f1,f2,f3,None
 
-    msg.submit(respond,[msg,chatbot],[msg,chatbot,history_dropdown,fup1,fup2,fup3])
-    send_btn.click(respond,[msg,chatbot],[msg,chatbot,history_dropdown,fup1,fup2,fup3])
-    voice_input.stop_recording(respond_voice,[voice_input,chatbot],[msg,chatbot,history_dropdown,fup1,fup2,fup3,voice_input])
+    msg.submit(respond,[msg,chatbot,lang_state],[msg,chatbot,history_dropdown,fup1,fup2,fup3])
+    send_btn.click(respond,[msg,chatbot,lang_state],[msg,chatbot,history_dropdown,fup1,fup2,fup3])
+    voice_input.stop_recording(respond_voice,[voice_input,chatbot,lang_state],[msg,chatbot,history_dropdown,fup1,fup2,fup3,voice_input])
 
-    def click_followup(suggestion,h):
-        answer,followups=chat_fn(suggestion,h)
+    def click_followup(suggestion,h,lang):
+        answer,followups=chat_fn(suggestion,h,lang)
         h.append({"role":"user","content":suggestion}); h.append({"role":"assistant","content":answer})
         f1=gr.update(value=followups[0],visible=True) if len(followups)>0 else gr.update(visible=False)
         f2=gr.update(value=followups[1],visible=True) if len(followups)>1 else gr.update(visible=False)
@@ -657,7 +659,7 @@ with gr.Blocks(title="Devreotes Lab Research Assistant") as demo:
         return "",h,gr.update(choices=get_vis_hist(),value=None),f1,f2,f3
 
     for btn in [fup1,fup2,fup3]:
-        btn.click(click_followup,[btn,chatbot],[msg,chatbot,history_dropdown,fup1,fup2,fup3])
+        btn.click(click_followup,[btn,chatbot,lang_state],[msg,chatbot,history_dropdown,fup1,fup2,fup3])
 
     def replay(sel,ch):
         if sel and sel in search_history: ch.append({"role":"user","content":sel}); ch.append({"role":"assistant","content":search_history[sel]})
