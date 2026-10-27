@@ -25,6 +25,29 @@ NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD", "YOUR_PASSWORD")
 
 driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
 
+# Step 0: Create constraints (these also create the lookup indexes)
+# Must run before the data load so the MERGE statements below use an
+# index lookup instead of scanning every node of that label.
+print("Creating constraints...")
+errors = []
+CONSTRAINTS = [
+    ("Paper", "number"),
+    ("Protein", "name"),
+    ("Gene", "name"),
+    ("Method", "name"),
+    ("Concept", "name"),
+    ("Organism", "name"),
+]
+with driver.session() as session:
+    for label, prop in CONSTRAINTS:
+        try:
+            session.run(
+                f"CREATE CONSTRAINT {label.lower()}_{prop}_unique IF NOT EXISTS "
+                f"FOR (n:{label}) REQUIRE n.{prop} IS UNIQUE"
+            )
+        except Exception as e:
+            errors.append(f"Constraint {label}.{prop}: {str(e)[:100]}")
+
 # Step 1: Load the Cypher file
 # We generated this file from our entity extraction pipeline.
 # It contains 3,887 MERGE statements — one for each paper node,
@@ -35,7 +58,6 @@ with open("load_graph.cypher", "r") as f:
 
 print(f"Found {len(statements)} statements")
 
-errors = []
 with driver.session() as session:
     for i, stmt in enumerate(statements):
         try:
@@ -107,4 +129,11 @@ with driver.session() as session:
         print(f"  {r['type']}: {r['count']}")
 
 driver.close()
-print("\nGraph rebuilt successfully.")
+
+print(f"\nTotal errors: {len(errors)}")
+for e in errors[:20]:
+    print(f"  Error: {e}")
+if errors:
+    print("Graph rebuilt WITH ERRORS. Review the errors above before using it.")
+    raise SystemExit(1)
+print("Graph rebuilt successfully.")

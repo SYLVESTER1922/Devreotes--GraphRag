@@ -129,10 +129,8 @@ The trade-off is that entity extraction isn't perfect (about 80–85% accuracy o
 ├── app.py                    # Chatbot application (deployed on Hugging Face)
 ├── requirements.txt          # Python dependencies
 ├── load_graph.cypher         # Cypher statements to rebuild the knowledge graph
-├── notebooks/
-│   └── GraphRag_Chatbot.ipynb  # Colab notebook for graph loading
-├── scripts/
-│   └── reload_graph.py       # Script to reload graph from scratch
+├── GraphRag_Chatbot.ipynb    # Colab notebook for graph loading
+├── reload_graph.py           # Script to reload graph from scratch
 └── README.md
 ```
 
@@ -141,7 +139,7 @@ The trade-off is that entity extraction isn't perfect (about 80–85% accuracy o
 ## Running Locally
 
 1. Clone this repo
-2. Install dependencies: `pip install neo4j openai PyMuPDF gradio`
+2. Install dependencies: `pip install -r requirements.txt`
 3. Set environment variables:
    ```
    NEO4J_URI=neo4j+s://your-instance.databases.neo4j.io

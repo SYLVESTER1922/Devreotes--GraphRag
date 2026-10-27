@@ -231,7 +231,7 @@ def process_upload(file):
     return f"📄 **{ent.get('title','?')}** ({ent.get('year','?')})\n\n**Proteins/Genes:** {pr}\n**Methods:** {me}\n**Concepts:** {co}\n**Organisms:** {og}\n**Findings:** {ent.get('key_findings','')}{rn}\n\n---\n*Enter password to add.*", json.dumps(ent)
 
 def confirm_upload(ej,pw):
-    if pw!=UPLOAD_PASSWORD: return "❌ Wrong password.",gr.update(visible=True)
+    if not UPLOAD_PASSWORD or pw!=UPLOAD_PASSWORD: return "❌ Wrong password.",gr.update(visible=True)
     if not ej: return "❌ No paper.",gr.update(visible=True)
     try: ent=json.loads(ej)
     except: return "❌ Invalid.",gr.update(visible=True)
