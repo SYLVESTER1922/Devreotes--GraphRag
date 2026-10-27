@@ -53,7 +53,7 @@ The chatbot runs on Hugging Face Spaces using Gradio. The graph lives on Neo4j A
 
 | Entity | Count |
 |--------|-------|
-| Papers | 238 |
+| Papers | 235 |
 | Proteins | 738 |
 | Genes | 738 |
 | Methods | 531 |
