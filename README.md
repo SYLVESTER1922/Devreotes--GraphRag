@@ -1,3 +1,14 @@
+---
+title: Devreotes Lab GraphRAG
+emoji: 🧬
+colorFrom: blue
+colorTo: yellow
+sdk: gradio
+sdk_version: 6.30.0
+app_file: app.py
+pinned: false
+---
+
 # Devreotes Lab GraphRAG Research Assistant
 
 **Sylvester Vhashe & Tadiwanashe C. Dzimbanete**
